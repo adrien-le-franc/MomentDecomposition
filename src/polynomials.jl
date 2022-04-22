@@ -1,6 +1,6 @@
 # julia 1.6
 #
-# struct for large scale polynomial optimization
+# tools for large scale polynomial optimization
 
 struct SparsePolynomial
 	support::Vector{Vector{UInt16}}
@@ -29,6 +29,8 @@ function SparsePolynomial(f::P, variables::Vector{V}) where {P <: Polynomial, V 
     return SparsePolynomial(support, coefficients) 
 
 end
+
+degree(f::SparsePolynomial) = maximum(length(monomial) for monomial in f.support)
 
 struct POP
 	objective::SparsePolynomial

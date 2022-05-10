@@ -14,7 +14,7 @@ end
 
 function set_moment_matrix!(model, pop, relaxation_order)
 
-	moment_labels = Dict{Vector{Int64}, Int64}()
+	moment_labels = Dict{Vector{Int64}, Int64}() # UInt16 ?
 
 	n_monomials = n_moments(pop.n_variables, relaxation_order)
 	@variable(model, moment_matrix[1:n_monomials, 1:n_monomials], PSD)
@@ -59,6 +59,10 @@ end
 
 function set_inequality_constraints!(model, pop, relaxation_order, moment_labels)
 
+	if pop.inequality_constraints == nothing
+		return nothing
+	end
+
 	for polynomial in pop.inequality_constraints
 
 		localizing_order = localizing_matrix_order(relaxation_order, polynomial)
@@ -92,6 +96,10 @@ function set_inequality_constraints!(model, pop, relaxation_order, moment_labels
 end
 
 function set_equality_constraints!(model, pop, relaxation_order, moment_labels)
+
+	if pop.equality_constraints == nothing
+		return nothing
+	end
 
 	for polynomial in pop.equality_constraints
 

@@ -14,10 +14,11 @@ end
 
 function set_moment_matrix!(model, pop, relaxation_order)
 
-	moment_labels = Dict{Vector{Int64}, Int64}() # UInt16 ?
+	moment_labels = Dict{Vector{UInt16}, Int64}() 
 
 	n_monomials = n_moments(pop.n_variables, relaxation_order)
-	@variable(model, moment_matrix[1:n_monomials, 1:n_monomials], PSD)
+
+	M = Matrix{AffExpr}(undef, n_monomials, n_monomials)
 
 	count = 0
 
@@ -31,10 +32,13 @@ function set_moment_matrix!(model, pop, relaxation_order)
 				moment_labels[label] = count
 			end
 
-			@constraint(model, moment_matrix[i, j] == model[:y][moment_labels[label]])
+			M[i, j] = AffExpr(0.)
+			add_to_expression!(M[i, j], model[:y][moment_labels[label]])
 
 		end
 	end
+
+	@constraint(model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
 
 	return moment_labels
 
@@ -75,16 +79,24 @@ function set_inequality_constraints!(model, pop, relaxation_order, moment_labels
 		else
 
 			n_monomials = n_moments(pop.n_variables, localizing_order)
-			localizing_matrix = @variable(model, [1:n_monomials, 1:n_monomials], PSD)
+
+			M = Matrix{AffExpr}(undef, n_monomials, n_monomials)
 
 			for (j, alpha) in moment_columns(pop, localizing_order)
 				for (i, beta) in moment_rows(pop, localizing_order, j)
 
 					labels = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support]
-					@constraint(model, localizing_matrix[i, j] == sum(polynomial.coefficients[k]*model[:y][moment_labels[labels[k]]] for k in 1:length(polynomial.coefficients)))
+					
+
+					M[i, j] = AffExpr(0.)
+					add_to_expression!(M[i, j], sum(polynomial.coefficients[k]*model[:y][moment_labels[labels[k]]] for k in 1:length(polynomial.coefficients)))
 
 				end
 			end
+
+
+			@constraint(model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
+
 
 		end
 

@@ -353,16 +353,21 @@ function set_equality_constraints!(model, pop, relaxation_order, moment_labels, 
 
 end
 
-function set_coupling_constraints!(model, relaxation_order, moment_labels, variable_sets)
+function set_coupling_constraints!(model, relaxation_order, moment_labels, variable_sets, dense_coupling)
 
 	for pair in combinations(1:length(variable_sets), 2)
 
 		k_1, k_2 = pair
 		intersection = intersect(variable_sets[k_1], variable_sets[k_2])
 
-		for alpha in moments(intersection, 2*relaxation_order)
+		for alpha in moments(intersection, 2*relaxation_order) # remove moment 0...0 ?
 
 			label = monomial(alpha)
+
+			if !dense_coupling && length(unique(label)) != 1
+				continue
+			end
+
 			@constraint(model, model[Symbol("y_$(k_1)")][moment_labels[k_1][label]] == model[Symbol("y_$(k_2)")][moment_labels[k_2][label]])
 
 		end
@@ -373,7 +378,8 @@ function set_coupling_constraints!(model, relaxation_order, moment_labels, varia
 
 end
 
-function decomposed_relaxation(pop::POP, relaxation_order::Int64, variable_sets::Vector{Vector{Int64}})
+function decomposed_relaxation(pop::POP, relaxation_order::Int64, variable_sets::Vector{Vector{Int64}};
+	dense_coupling::Bool=true)
 
 	model = Model() 
 
@@ -393,7 +399,7 @@ function decomposed_relaxation(pop::POP, relaxation_order::Int64, variable_sets:
 	set_inequality_constraints!(model, pop, relaxation_order, moment_labels, uint16_variable_sets)
 	set_equality_constraints!(model, pop, relaxation_order, moment_labels, uint16_variable_sets)
 
-	set_coupling_constraints!(model, relaxation_order, moment_labels, uint16_variable_sets)
+	set_coupling_constraints!(model, relaxation_order, moment_labels, uint16_variable_sets, dense_coupling)
 
 	return model
 

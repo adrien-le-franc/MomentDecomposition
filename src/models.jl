@@ -2,6 +2,7 @@
 #
 # models for the hierarchy of moment relaxations
 
+const maxInt64 = typemax(Int64)
 
 function set_moment_variables!(model, pop, relaxation_order)
 	
@@ -353,7 +354,7 @@ function set_equality_constraints!(model, pop, relaxation_order, moment_labels, 
 
 end
 
-function set_coupling_constraints!(model, relaxation_order, moment_labels, variable_sets, dense_coupling)
+function set_coupling_constraints!(model, relaxation_order, moment_labels, variable_sets, max_coupling_order)
 
 	for pair in combinations(1:length(variable_sets), 2)
 
@@ -364,7 +365,7 @@ function set_coupling_constraints!(model, relaxation_order, moment_labels, varia
 
 			label = monomial(alpha)
 
-			if !dense_coupling && length(unique(label)) != 1
+			if length(label) > max_coupling_order
 				continue
 			end
 
@@ -378,16 +379,15 @@ function set_coupling_constraints!(model, relaxation_order, moment_labels, varia
 
 end
 
-function decomposed_relaxation(pop::POP, relaxation_order::Int64, variable_sets::Vector{Vector{Int64}};
-	dense_coupling::Bool=true)
+function decomposed_relaxation(pop::POP, relaxation_order::Int64, variable_sets::Vector{Vector{UInt16}};
+	max_coupling_order::Int64=maxInt64)
 
 	model = Model() 
 
 	n_sets = length(variable_sets)
 	moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:n_sets)
-	uint16_variable_sets = [convert.(UInt16, set) for set in variable_sets] 
-
-	for (k, set) in enumerate(uint16_variable_sets)
+	
+	for (k, set) in enumerate(variable_sets)
 
 		set_moment_variables!(model, relaxation_order, set, k)
 		moment_labels[k] = set_moment_matrix!(model, relaxation_order, set, k)
@@ -395,11 +395,11 @@ function decomposed_relaxation(pop::POP, relaxation_order::Int64, variable_sets:
 
 	end
 
-	set_objective!(model, pop, moment_labels, uint16_variable_sets)
-	set_inequality_constraints!(model, pop, relaxation_order, moment_labels, uint16_variable_sets)
-	set_equality_constraints!(model, pop, relaxation_order, moment_labels, uint16_variable_sets)
+	set_objective!(model, pop, moment_labels, variable_sets)
+	set_inequality_constraints!(model, pop, relaxation_order, moment_labels, variable_sets)
+	set_equality_constraints!(model, pop, relaxation_order, moment_labels, variable_sets)
 
-	set_coupling_constraints!(model, relaxation_order, moment_labels, uint16_variable_sets, dense_coupling)
+	set_coupling_constraints!(model, relaxation_order, moment_labels, variable_sets, max_coupling_order)
 
 	return model
 

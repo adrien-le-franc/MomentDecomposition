@@ -10,7 +10,8 @@ using ChordalGraph
 include("utils.jl")
 include("polynomials.jl")
 include("moments.jl")
-include("models.jl")
+include("models/dense.jl")
+include("models/decomposed.jl")
 include("sparsity/correlative.jl")
 
 end 

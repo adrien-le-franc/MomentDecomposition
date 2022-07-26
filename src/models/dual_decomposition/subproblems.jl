@@ -3,14 +3,19 @@
 # dual decomposition subroblems for the hierarchy of moment relaxations
 
 
-mutable struct Subproblem
+mutable struct SubProblem
 
 	set_id::Int64
 	model::Model
 
-	coupling_terms::Vector{Vector{AffExpr}} #### best deal ! Dict ?
+	# SubObjective ?
+	f_k::Union{AffExpr, Nothing}
+	coupling_terms::Union{Vector{Vector{AffExpr}}, Nothing} 
 
-	f_k::SparsePolynomial ### AffExpr
+	# why ?
+	multiplier_ids::Union{Vector{Int64}, Nothing}
+
+	 
 	
 	#coupling_pairs::CouplingPairs 
 
@@ -18,47 +23,46 @@ mutable struct Subproblem
 
 end
 
-function Subproblem(k::Int64, f::SparsePolynomial)
-	return Subproblem(k, Model(), f, CouplingPairs(), nothing)
+function Subproblem(k::Int64)
+	return Subproblem(k, Model(), nothing, nothing, nothing)
 end
 
-struct CouplingPairs
-	ranks::Vector{Int64}
-	signs::Vector{Float64}
-end
-
-function CouplingPairs() = CouplingPairs(Int64[], Float64[])
-
-struct CouplingMoments
+### ?
+struct MultiplierInformation
 	moments::Vector{Vector{UInt16}}
 	pair::Tuple{UInt64, UInt16}
 end
 
-function set_moment_variables!(subproblem::Subproblem, relaxation_order::Int64, 
-	set::Vector{UInt16}, k::Int64)
 
-	set_moment_variables!(subproblem.model, relaxation_order, set, k)
 
-	return nothing
 
-end
-
-function set_moment_matrix!(subproblem::Subproblem, relaxation_order::Int64, set::Vector{UInt16}, k::Int64)
+function set_polynomial_objective!(subproblems::Vector{Subproblem}, pop::POP, 
+	relaxation_order::Int64, moment_labels, variable_sets::Vector{Vector{UInt16}})
 	
-	subproblem.moment_labels = set_moment_matrix!(subproblem.model, relaxation_order, set, k)
+	objective = objective_decomposition(pop, variable_sets) ## allocations -> slow ??
+
+	for k in 1:length(variable_sets)
+
+		n_temrs = length(objective[k].coefficients)
+		
+		if n_temrs > 0
+
+			moments_f_k = [moment_labels[k][objective[k].support[n]] for n in 1:n_temrs]
+			
+			subproblems[k].f_k = @expression(subproblems[k].model, 
+				sum(objective[k].coefficients[n]*subproblems[k].model[Symbol("y_$k")][moments_f_k[n]] for n in 1:n_temrs)	
+		
+		end
+	
+
+	end
 
 	return nothing
 
 end
-
-function set_probability_measure_constraint!(subproblem::Subproblem, set, k)
-	@constraint(subproblem.model, subproblem.model[Symbol("y_$k")][subproblem.moment_labels[UInt16[]]] == 1.)
-	return nothing
-end
-
 
 function set_inequality_constraints!(subproblems::Vector{Subproblem}, pop::POP, 
-	relaxation_order::Int64, variable_sets::Vector{Vector{UInt16}})
+	relaxation_order::Int64, moment_labels, variable_sets::Vector{Vector{UInt16}})
 
 	for polynomial in pop.inequality_constraints
 
@@ -68,7 +72,7 @@ function set_inequality_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 		if localizing_order == 0
 
 			@constraint(subproblems[k].model, 
-				sum(polynomial.coefficients[n]*subproblems[k].models[Symbol("y_$k")][subproblems[k].moment_labels[polynomial.support[n]]]
+				sum(polynomial.coefficients[n]*subproblems[k].models[Symbol("y_$k")][moment_labels[k][polynomial.support[n]]]
 				for n in 1:length(polynomial.coefficients)) >= 0)
 
 		else
@@ -81,7 +85,7 @@ function set_inequality_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 
 					labels = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support]
 					@constraint(subproblems[k].model, 
-						localizing_matrix[i, j] == sum(polynomial.coefficients[n]*subproblems[k].models[Symbol("y_$k")][subproblems[k].moment_labels[labels[n]]] for n in 1:length(polynomial.coefficients)))
+						localizing_matrix[i, j] == sum(polynomial.coefficients[n]*subproblems[k].models[Symbol("y_$k")][moment_labels[k][labels[n]]] for n in 1:length(polynomial.coefficients)))
 
 				end
 			end
@@ -96,7 +100,7 @@ function set_inequality_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 end
 
 function set_equality_constraints!(subproblems::Vector{Subproblem}, pop::POP, 
-	relaxation_order::Int64, variable_sets::Vector{Vector{UInt16}})
+	relaxation_order::Int64, moment_labels, variable_sets::Vector{Vector{UInt16}})
 
 	for polynomial in pop.equality_constraints
 
@@ -106,7 +110,7 @@ function set_equality_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 		if localizing_order == 0
 
 			@constraint(subproblems[k].model, 
-				sum(polynomial.coefficients[n]*subproblems[k].model[Symbol("y_$k")][subproblems[k].moment_labels[polynomial.support[n]]]
+				sum(polynomial.coefficients[n]*subproblems[k].model[Symbol("y_$k")][moment_labels[k][polynomial.support[n]]]
 				for n in 1:length(polynomial.coefficients)) == 0)
 
 		else
@@ -116,7 +120,7 @@ function set_equality_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 
 					labels = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support]
 					@constraint(subproblems[k].model, 
-						sum(polynomial.coefficients[n]*subproblems[k].model[Symbol("y_$k")][subproblems[k].moment_labels[labels[n]]] for n in 1:length(polynomial.coefficients)) == 0.)
+						sum(polynomial.coefficients[n]*subproblems[k].model[Symbol("y_$k")][moment_labels[k][labels[n]]] for n in 1:length(polynomial.coefficients)) == 0.)
 
 				end
 			end			
@@ -130,12 +134,15 @@ function set_equality_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 
 end
 
-function set_coupling_constraints!(subproblems::Vector{Subproblem}, 
+function set_Lagrange_multipliers!(subproblems::Vector{Subproblem}, 
 	relaxation_order, moment_labels, variable_sets, max_coupling_order)
 
-	all_coupling_moments = CouplingMoments[]
 
-	for (i, pair) in enumerate(combinations(1:length(variable_sets), 2))
+
+	multiplier_information = MultiplierInformation[] 
+
+
+	for (id, pair) in enumerate(combinations(1:length(variable_sets), 2))
 
 		k_1, k_2 = pair
 		intersection = intersect(variable_sets[k_1], variable_sets[k_2])
@@ -144,7 +151,10 @@ function set_coupling_constraints!(subproblems::Vector{Subproblem},
 			continue
 		end
 
-		coupling_moments = CouplingMoments(Vector{UInt16}[] , (k_1, k_2))
+		pair_information = MultiplierInformation(Vector{UInt16}[] , (k_1, k_2))
+
+		coupling_moments_k_1 = AffExpr[]
+		coupling_moments_k_2 = AffExpr[]
 
 		for alpha in moments(intersection, 2*relaxation_order) # remove moment 0...0 ?
 
@@ -156,51 +166,49 @@ function set_coupling_constraints!(subproblems::Vector{Subproblem},
 
 			# store coupling information in subproblems
 
-			push!(subproblems[k_1].coupling_pairs.ranks, i)
-			push!(subproblems[k_1].coupling_pairs.signs, 1.)
-
-			push!(subproblems[k_2].coupling_pairs.ranks, i)
-			push!(subproblems[k_2].coupling_pairs.signs, -1.)
+			push!(coupling_moments_k_1, 1*subproblems[k_1].model[Symbol("y_$(k_1)")][moment_labels[k_1][label]])
+			push!(coupling_moments_k_2, -1*subproblems[k_2].model[Symbol("y_$(k_2)")][moment_labels[k_2][label]])
 
 			# store coupling information in master
 
-			push!(coupling_moments.moments, label)
+			push!(pair_information.moments, label)
 
 		end
 
-		push!(all_coupling_moments, coupling_moments)
+		push!(subproblems[k_1].coupling_terms, coupling_moments_k_1)
+		push!(subproblems[k_2].coupling_terms, coupling_moments_k_2)
+		push!(subproblems[k_1].multiplier_ids, id)
+		push!(subproblems[k_2].multiplier_ids, id)
+
+		push!(multiplier_information, pair_information)
 
 	end
 
-	return all_coupling_moments
+	return multiplier_information
 
 end
 
-function set_dual_objective!(subproblem::Subproblem, moment_labels, dual_variable)
+function update_dual_objective!(subproblem::SubProblem, submultiplier::Vector{Vector{Float64}})
 
+	# normalize ?
 
-	f = AffExpr(0.) 
-
-	# objective f_k -> def as an expression once and for all ???
-
-	n_temrs = length(subproblem.f_k.coefficients)
-	
-	if n_temrs > 0
-		
-		moments_f_k = [subproblem.moment_labels[subproblem.f_k.support[n]] for n in 1:n_temrs]
-		f += sum(subproblem.f_k.coefficients[n]*subproblem.model[Symbol("y_$k")][moments_f_k[n]] for n in 1:n_temrs)	
-	
-	end
-
-	# coupling terms -> def moment vector as an expression once and for all ???
-
-
-
-
-
-
-	@objective(model, Min, f)
+	@objective(subproblem.model, Min, 
+		subproblem.f_k + sum(subproblem.coupling_terms[k]'*submultiplier[k] 
+		for k in 1:length(submultiplier)))
 
 	return nothing
+
+end
+
+function subproblem_oracle(subproblem, submultiplier)
+
+	update_dual_objective!(subproblem, submultiplier)
+	optimize!(subproblem.model)
+
+
+	# check optimizer status !!
+
+	return push!([value.(coupling_term) for coupling_term in subproblem.coupling_terms], 
+			[objective_value(subproblem.model)]) # check super/sub gradient !!
 
 end

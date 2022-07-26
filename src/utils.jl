@@ -5,7 +5,7 @@
 function ncbfind(A, l, a)
 	"""
 	find position of a in ordered list A
-	taken from the TSSOS package
+	borrowed from the TSSOS package
 	https://github.com/wangjie212/TSSOS
 	"""
     low = 1
@@ -22,3 +22,5 @@ function ncbfind(A, l, a)
     end
     return 0
 end
+
+ncbfind(A, a) = ncbfind(A, length(A), a)

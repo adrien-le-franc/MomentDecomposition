@@ -4,8 +4,12 @@ using JuMP
 using DynamicPolynomials
 using Combinatorics
 using LinearAlgebra
-using Graphs
+using Graphs # ??
 using ChordalGraph
+using Distributed
+using SubgradientMethods
+
+const SubgradientMethods = SM
 
 include("utils.jl")
 include("polynomials.jl")

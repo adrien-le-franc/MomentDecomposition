@@ -156,7 +156,7 @@ function set_Lagrange_multipliers!(subproblems::Vector{Subproblem},
 		coupling_moments_k_1 = AffExpr[]
 		coupling_moments_k_2 = AffExpr[]
 
-		for alpha in moments(intersection, 2*relaxation_order) # remove moment 0...0 ?
+		for alpha in coupling_moments(intersection, 2*relaxation_order) # remove moment 0...0 ?
 
 			label = monomial(alpha)
 

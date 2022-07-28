@@ -3,20 +3,22 @@ module MomentHierarchy
 using JuMP
 using DynamicPolynomials
 using Combinatorics
-using ChordalGraph
-using Distributed
 
-# unregistered package
-using SubgradientMethods
+# sparsity
+using Graphs
+using ChordalGraph
+
+# decomposition
+using Distributed
+using SubgradientMethods # unregistered package !
 const SGM = SubgradientMethods
 
 # check utility
 using LinearAlgebra
-using Graphs 
-
-include("utils.jl")
-include("polynomials.jl")
-include("moments.jl")
+ 
+include("basics/utils.jl")
+include("basics/polynomials.jl")
+include("basics/moments.jl")
 
 include("models/dense.jl")
 

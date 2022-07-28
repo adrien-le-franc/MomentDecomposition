@@ -6,21 +6,25 @@
 ## tools for defining separable subproplems
 
 
-function set_moment_variables!(model::Model, relaxation_order, set::Vector{UInt16}, k::Int64)
+function set_moment_variables!(model::Model, relaxation_order, set::Vector{Integer}, k::Int64)
+
+	if !all(set .> 0)
+		error("variable indices in $(set) must be strictly positive")
+	end
 	
-	n_moment_variables = n_moments(length(set), 2*relaxation_order)
+	n_moment_variables = n_moments(set, 2*relaxation_order)
 	y = @variable(model, [1:n_moment_variables], base_name = "y_$k")
-	model[Symbol("y_$k")] = y
+	model[y_(k)] = y
 
 	return nothing
 
 end
 
-function set_moment_matrix!(model::Model, relaxation_order::Int64, set::Vector{UInt16}, k::Int64)
+function set_moment_matrix!(model::Model, relaxation_order::Int64, set::Vector{Integer}, k::Int64)
 
 	moment_labels = Dict{Vector{UInt16}, Int64}()
 
-	n_monomials = n_moments(length(set), relaxation_order)
+	n_monomials = n_moments(set, relaxation_order)
 	moment_matrix = @variable(model, [1:n_monomials, 1:n_monomials], PSD, base_name = "moment_matrix_$k")
 	model[Symbol("moment_matrix_$k")] = moment_matrix	
 
@@ -36,7 +40,7 @@ function set_moment_matrix!(model::Model, relaxation_order::Int64, set::Vector{U
 				moment_labels[label] = count
 			end
 
-			@constraint(model, moment_matrix[i, j] == model[Symbol("y_$k")][moment_labels[label]])
+			@constraint(model, moment_matrix[i, j] == model[y_(k)][moment_labels[label]])
 
 		end
 	end
@@ -45,8 +49,8 @@ function set_moment_matrix!(model::Model, relaxation_order::Int64, set::Vector{U
 
 end
 
-function set_probability_measure_constraint!(model::Model, moment_labels, set, k)
-	@constraint(model, model[Symbol("y_$k")][moment_labels[k][UInt16[]]] == 1.)
+function set_probability_measure_constraint!(model::Model, moment_labels, k)
+	@constraint(model, model[y_(k)][moment_labels[k][UInt16[]]] == 1.)
 	return nothing
 end
 
@@ -183,14 +187,15 @@ function set_equality_constraints!(model::Model, pop, relaxation_order, moment_l
 
 end
 
-function set_coupling_constraints!(model::Model, relaxation_order, moment_labels, variable_sets, max_coupling_order)
+function set_coupling_constraints!(model::Model, relaxation_order, moment_labels, 
+	variable_sets::Vector{Vector{Integer}}, max_coupling_order)
 
 	for pair in combinations(1:length(variable_sets), 2)
 
 		k_1, k_2 = pair
 		intersection = intersect(variable_sets[k_1], variable_sets[k_2])
 
-		for alpha in moments(intersection, 2*relaxation_order) # remove moment 0...0 ?
+		for alpha in coupling_moments(intersection, 2*relaxation_order) # remove moment 0...0 ?
 
 			label = monomial(alpha)
 
@@ -220,7 +225,7 @@ function almost_decomposed_relaxation(pop::POP, relaxation_order::Int64, variabl
 
 		set_moment_variables!(model, relaxation_order, set, k)
 		moment_labels[k] = set_moment_matrix!(model, relaxation_order, set, k)
-		set_probability_measure_constraint!(model, moment_labels, set, k)
+		set_probability_measure_constraint!(model, moment_labels, k)
 
 	end
 

@@ -1,7 +1,7 @@
 # julia 1.6
 
 using Test
-using MomentDecomposition
+using MomentHierarchy
 MH = MomentHierarchy
 using DynamicPolynomials
 using JuMP
@@ -36,13 +36,28 @@ end
 	sparse_f = MH.SparsePolynomial(f, x)
 	pop = MH.POP(f, x)
 
-	@test MH.n_moments(3, 2) == 10
-	#@test length(collect(MH.moments_columns([1, 3, 5], 2))) == MH.n_moments(3, 2)
-	@test length(collect(MH.moment_columns(pop, 2))) == MH.n_moments([1, 3, 5], 2)
-	@test length(collect(MH.moment_rows(pop, 2, 5))) == 5
-	#@test MH.label(collect(MH.moments([2, 3], 2))[2]) == [0x0002]
-
+	@test MH.n_moments(3, 1) == 4
+	@test MH.n_moments(collect(1:3), 1) == 4
+	@test MH.n_moments(pop, 2) == 10
 	@test MH.localizing_matrix_order(2, sparse_f) == 0
+
+	@test collect(MH.moment_columns([0x0001], 2)) == [(1, [0x0000, 0x0000]),
+													  (2, [0x0000, 0x0001]),
+													  (3, [0x0001, 0x0001])]
+
+	@test collect(MH.moment_rows([0x0001], 1, 2)) == [(1, [0x0000]),
+ 													  (2, [0x0001])]
+
+ 	@test collect(MH.coupling_moments([0x0001, 0x0003], 2)) == [[0x0000, 0x0000],
+																[0x0000, 0x0001],
+																[0x0000, 0x0003],
+																[0x0001, 0x0001],
+																[0x0001, 0x0003],
+																[0x0003, 0x0003]]
+
+	@test MH.monomial([0x0002, 0x0000, 0x0001]) == [0x0001, 0x0002]
+	@test MH.monomial_product([0x0001], [0x0001, 0x0000]) == [0x0001, 0x0001]
+	@test MH.monomial_product([0x0001], [0x0001, 0x0000], [0x0000]) == [0x0001, 0x0001]
 
 end
 
@@ -60,6 +75,8 @@ end
 	MH.set_moment_variables!(model, pop, relaxation_order)
 	moment_labels = MH.set_moment_matrix!(model, pop, relaxation_order)
 	MH.set_objective!(model, pop, moment_labels)
+
+	
 
 	@test size(model[:moment_matrix])[1] == MH.n_moments(6, 1)
 	@test length(model[:y]) == MH.n_moments(6, 2)

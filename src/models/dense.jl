@@ -5,11 +5,9 @@
 
 # dense relaxation
 
-const maxInt64 = typemax(Int64)
-
 function set_moment_variables!(model, pop, relaxation_order)
 	
-	n_moment_variables = n_moments(pop.n_variables, 2*relaxation_order)
+	n_moment_variables = n_moments(pop, 2*relaxation_order)
 	@variable(model, y[1:n_moment_variables])
 
 	return nothing
@@ -20,7 +18,7 @@ function set_moment_matrix!(model, pop, relaxation_order)
 
 	moment_labels = Dict{Vector{UInt16}, Int64}() 
 
-	n_monomials = n_moments(pop.n_variables, relaxation_order)
+	n_monomials = n_moments(pop, relaxation_order)
 
 	M = Matrix{AffExpr}(undef, n_monomials, n_monomials)
 
@@ -160,6 +158,17 @@ function dense_relaxation(pop::POP, relaxation_order::Int64)
 	return model
 
 end
+
+
+
+
+
+
+
+
+
+
+
 
 
 # NLP

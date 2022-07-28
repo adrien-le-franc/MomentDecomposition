@@ -6,7 +6,6 @@
 mutable struct Multiplier
 	value::Vector{Vector{Float64}}
 	information::Vector{MultiplierInformation}
-	#n_pairs::Int64
 end
 
 
@@ -83,14 +82,35 @@ end
 
 function initialize_multiplier(multiplier_value, multiplier_information)
 
-	return ?
+	return NaN
 
 end
 
 
+
+### specifique à SGM
+
+mutable struct DualOracle <: SGM.AbstractOracle 
+	subproblems
+	multiplier
+	oracle_data
+end
+
+function SGM.call_oracle!(oracle::DualOracle, variable::Vector{Vector{Float64}}, k::Int64)
+	return call_maximization_oracle!(subproblems, multiplier, oracle_data)
+end 
+
+function SGM.step_rule(o::DualOracle, f::Float64, s::Array{Float64,1}, k::Int64) 
+	return 1/k ### non
+end
+
 function run_optimization!(subproblems::Vector{SubProblem}, multiplier::Multiplier)
 
-	# ??? update Subgradient Methods first
+	oracle = DualOracle(NaN)
+	multiplier = initialize_multiplier(multiplier_value, multiplier_information)
+	parameters = SM.Parameters(multiplier.value, 50, Second(100), 0.01)
+
+	output = SM.optimize!(oracle, parameters)
 
 end
 

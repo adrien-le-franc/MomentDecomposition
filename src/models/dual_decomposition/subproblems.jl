@@ -50,7 +50,7 @@ function set_polynomial_objective!(subproblems::Vector{Subproblem}, pop::POP,
 			moments_f_k = [moment_labels[k][objective[k].support[n]] for n in 1:n_temrs]
 			
 			subproblems[k].f_k = @expression(subproblems[k].model, 
-				sum(objective[k].coefficients[n]*subproblems[k].model[Symbol("y_$k")][moments_f_k[n]] for n in 1:n_temrs)	
+				sum(objective[k].coefficients[n]*subproblems[k].model[Symbol("y_$k")][moments_f_k[n]] for n in 1:n_temrs))
 		
 		end
 	

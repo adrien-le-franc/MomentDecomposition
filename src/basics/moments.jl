@@ -15,7 +15,7 @@ function n_moments(pop::POP, relaxation_order::Int64)
 	return n_moments(pop.n_variables, relaxation_order)
 end
 
-function localizing_matrix_order(relaxation_order::Int64, f::SparsePolynomial)
+function localizing_matrix_order(f::SparsePolynomial, relaxation_order::Int64)
 	return relaxation_order - ceil(Int64, degree(f)/2.0)
 end
 

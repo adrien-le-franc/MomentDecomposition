@@ -14,10 +14,10 @@ using JuMP
 	sparse_polynomial = MH.SparsePolynomial(f, x)
 
 	@test sparse_polynomial.coefficients == [1.; 1.; 1.; 1.]
-	@test sparse_polynomial.support == [convert.(UInt16, [1; 1; 1; 1]), 
-										convert.(UInt16, [2; 2; 2; 2]), 
-										convert.(UInt16, [3; 3; 3; 3]), 
-										convert.(UInt16, [1; 2; 3])]
+	@test sparse_polynomial.support == [[0x0001, 0x0001, 0x0001, 0x0001], 
+										[0x0002, 0x0002, 0x0002, 0x0002], 
+										[0x0003, 0x0003, 0x0003, 0x0003], 
+										[0x0001, 0x0002, 0x0003]]
 	@test MH.degree(sparse_polynomial) == 4
 
 	pop = MH.POP(f, x, g_inequality=[- x[1]^2 - 0.5*x[2]^2, - x[2]^2 - x[3]^2])
@@ -26,6 +26,10 @@ using JuMP
 	@test pop.objective.support == sparse_polynomial.support
 	@test pop.inequality_constraints[1].coefficients == [-1. ; -0.5]
 	@test pop.equality_constraints == nothing
+	@test collect(MH.terms(sparse_polynomial)) == [([0x0001, 0x0001, 0x0001, 0x0001], 1.),
+												   ([0x0002, 0x0002, 0x0002, 0x0002], 1.),
+												   ([0x0003, 0x0003, 0x0003, 0x0003], 1.),
+												   ([0x0001, 0x0002, 0x0003], 1.)]
 
 end
 
@@ -39,7 +43,7 @@ end
 	@test MH.n_moments(3, 1) == 4
 	@test MH.n_moments(collect(1:3), 1) == 4
 	@test MH.n_moments(pop, 2) == 10
-	@test MH.localizing_matrix_order(2, sparse_f) == 0
+	@test MH.localizing_matrix_order(sparse_f, 2) == 0
 
 	@test collect(MH.moment_columns([0x0001], 2)) == [(1, [0x0000, 0x0000]),
 													  (2, [0x0000, 0x0001]),
@@ -61,7 +65,7 @@ end
 
 end
 
-@testset "models" begin
+@testset "dense model" begin
 	
 	@polyvar x[1:6]
 	f = x[1]*x[2] + x[2]*x[3] + x[3]*x[4] + x[4]*x[5] + x[5]*x[6]
@@ -72,40 +76,76 @@ end
 	
 	relaxation_order = 1
 	model = Model()
+
 	MH.set_moment_variables!(model, pop, relaxation_order)
-	moment_labels = MH.set_moment_matrix!(model, pop, relaxation_order)
-	MH.set_objective!(model, pop, moment_labels)
-
+	@test length(model[:y]) == 28
 	
-
-	@test size(model[:moment_matrix])[1] == MH.n_moments(6, 1)
-	@test length(model[:y]) == MH.n_moments(6, 2)
+	moment_labels = MH.set_moment_matrix!(model, pop, relaxation_order)
+	@test length(keys(moment_labels)) == 28
+	
+	@test MH.linear_expression(model, pop.objective, moment_labels) == model[:y][5] + 
+	model[:y][9] + model[:y][14] + model[:y][20] + model[:y][27]
+	
+	MH.set_objective!(model, pop, moment_labels)
 	@test objective_function(model) == model[:y][5] + model[:y][9] + 
 		model[:y][14] + model[:y][20] + model[:y][27]
 
-	#set_probability_measure_constraint!(model, moment_labels)
-	#set_inequality_constraints!(model, pop, relaxation_order)
-	#set_equality_constraints!(model, pop, relaxation_order)
+	MH.set_probability_measure_constraint!(model, moment_labels)
+	MH.set_polynomial_constraints!(model, pop, relaxation_order, moment_labels)
 
+	@test num_constraints(model, AffExpr, MOI.EqualTo{Float64}) == 3
+	@test num_constraints(model, AffExpr, MOI.GreaterThan{Float64}) == 1
+	@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 1
 
-	# find new tests !
+end
 
+@testset "decomposition tools" begin
+	
+	@polyvar x[1:6]
+	f = x[1]*x[2] + x[2]*x[3] + x[3]*x[4] + x[4]*x[5] + x[5]*x[6]
+	g = 1 - x[1]^2 - x[2]^2
+	pop = MH.POP(f, x, g_equality=g)
+	variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
 
-	#
-	#model = MH.dense_relaxation(pop, 1)
-	"""
 	relaxation_order = 1
 	model = Model()
-	decomposition_sets = [[1, 2, 3], [2, 3, 4, 5], [4, 5, 6]]
-	uint16_sets = [convert.(set) for set in decomposition_sets]
-	k = 1
-	set = uint16_sets[k]
-	MH.set_moment_variables!(model, relaxation_order, set, k)
-	moment_labels = MH.set_moment_matrix!(model, relaxation_order, set, k)
 
-	MH.set_objective!(model, pop, moment_labels, uint16_variable_sets)
+	MH.set_moment_variables!(model, variable_sets[1], 1, relaxation_order)
+	@test length(model[:y_1]) == 10
 	
-	"""
+	moment_labels = MH.set_moment_matrix!(model, variable_sets[1], 1, relaxation_order)
+	@test length(keys(moment_labels)) == 10
+
+	@test MH.objective_decomposition(pop, variable_sets)[1].support == [[0x0001, 0x0002],
+																  		[0x0002, 0x0003]]
+	@test MH.assign_constraint_to_set(pop.equality_constraints[1], variable_sets) == 1
+
+end
+
+@testset "dual decomposition" begin
+	
+	@testset "subproblems" begin
+
+
+
+	end
+
+	@testset "master" begin
+
+	end
+
+
+end
+
+@testset "dummy decomposition" begin
+	
 	
 
+
+end
+
+@testset "nlp" begin
+	
+	
+	
 end

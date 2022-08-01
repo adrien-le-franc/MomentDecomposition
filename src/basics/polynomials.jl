@@ -31,6 +31,7 @@ function SparsePolynomial(f::P, variables::Vector{V}) where {P <: Polynomial, V 
 end
 
 degree(f::SparsePolynomial) = maximum(length(monomial) for monomial in f.support)
+terms(f::SparsePolynomial) = zip(f.support, f.coefficients)
 
 struct POP
 	objective::SparsePolynomial

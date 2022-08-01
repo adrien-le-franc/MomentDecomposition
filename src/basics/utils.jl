@@ -24,5 +24,3 @@ function ncbfind(A, l, a)
 end
 
 ncbfind(A, a) = ncbfind(A, length(A), a)
-
-y_(k::Int64) = Symbol("y_$k")

@@ -27,7 +27,7 @@ function dual_decomposition_models(pop::POP, relaxation_order::Int64,
 	
 	subproblems, moment_labels = build_dual_subproblems(variable_sets, relaxation_order)
 
-	set_polynomial_objective!(subproblems, pop, relaxation_order, moment_labels, variable_sets)
+	set_polynomial_objective!(subproblems, pop, moment_labels, variable_sets)
 	set_polynomial_constraints!(subproblems, pop, relaxation_order, moment_labels, variable_sets)
 	
 	multiplier_information = set_Lagrange_multipliers!(subproblems, relaxation_order, 

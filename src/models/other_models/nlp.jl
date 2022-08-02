@@ -3,7 +3,7 @@
 # nonlinear model for polynomial optimization
 
 
-function polynomial_expression(model, polynomial::SparsePolynomial)
+function polynomial_expression(model::Model, polynomial::SparsePolynomial)
 
 	support = [convert.(Int64, monomial) for monomial in polynomial.support]
 	n_terms = length(support)

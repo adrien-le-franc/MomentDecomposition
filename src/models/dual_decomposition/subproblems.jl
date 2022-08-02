@@ -13,8 +13,8 @@ mutable struct SubProblem
 
 end
 
-function Subproblem(k::Int64)
-	return Subproblem(k, Model(), AffExpr(0.), Vector{AffExpr}[], Int64[])
+function SubProblem(k::Int64)
+	return SubProblem(k, Model(), AffExpr(0.), Vector{AffExpr}[], Int64[])
 end
 
 struct MultiplierInformation{T<:Integer}
@@ -73,14 +73,16 @@ end
 
 function set_polynomial_objective!(subproblems::Vector{SubProblem}, pop::POP, 
 	moment_labels::Dict{Int64, Dict{Vector{UInt16}, Int64}}, 
-	variable_sets::Vector{Vector{UInt16}})
+	variable_sets::Vector{Vector{T}}) where T<:Integer
+	
+	n_sets = length(variable_sets)
 
 	for (support, coefficient) in terms(pop.objective)
 		for (k, set) in enumerate(variable_sets)
 
 			if issubset(unique(support), set)
 				add_to_expression!(subproblems[k].polynomial_objective, 
-					coefficient*moment_labels[k][support])
+					coefficient*subproblems[k].model[:y][moment_labels[k][support]])
 				break
 			elseif k == n_sets
 				error("could not decompose objective over variable sets")
@@ -93,16 +95,82 @@ function set_polynomial_objective!(subproblems::Vector{SubProblem}, pop::POP,
 
 end
 
-function set_polynomial_constraints!(subproblems::Vector{Subproblem}, pop::POP, 
+function set_inequality_constraint!(subproblem::SubProblem, polynomial::SparsePolynomial, 
+	relaxation_order::Int64, moment_labels::Dict{Int64, Dict{Vector{UInt16}, Int64}}, 
+	variable_sets::Vector{Vector{T}}) where T<:Integer
+
+	k = assign_constraint_to_set(polynomial, variable_sets)
+	localizing_order = localizing_matrix_order(polynomial, relaxation_order)
+
+	if localizing_order == 0
+
+		@constraint(subproblem.model, 
+			linear_expression(subproblem.model, polynomial, moment_labels[k]) >= 0)
+
+	else
+
+		n_monomials = n_moments(variable_sets[k], localizing_order)
+		M = Matrix{AffExpr}(undef, n_monomials, n_monomials)
+
+		for (j, alpha) in moment_columns(variable_sets[k], localizing_order)
+			for (i, beta) in moment_rows(variable_sets[k], localizing_order, j)
+
+				labels = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support]
+				M[i, j] = linear_expression(subproblem.model, polynomial, labels, moment_labels[k])
+
+			end
+		end
+
+		@constraint(model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
+
+	end
+
+	return nothing
+
+end
+
+function set_equality_constraint!(subproblem::SubProblem, polynomial::SparsePolynomial, 
+	relaxation_order::Int64, moment_labels::Dict{Int64, Dict{Vector{UInt16}, Int64}}, 
+	variable_sets::Vector{Vector{T}}) where T<:Integer
+
+	k = assign_constraint_to_set(polynomial, variable_sets)
+	localizing_order = localizing_matrix_order(polynomial, relaxation_order)
+
+	if localizing_order == 0
+
+		@constraint(subproblem.model, 
+			linear_expression(subproblem.model, polynomial, moment_labels[k]) == 0)
+
+	else
+
+		for (j, alpha) in moment_columns(variable_sets[k], localizing_order)
+			for (i, beta) in moment_rows(variable_sets[k], localizing_order, j)
+
+				labels = [monomial_product(alpha, beta, gamma) 
+					for gamma in polynomial.support]
+				@constraint(subproblem.model, linear_expression(model, polynomial, 
+					labels, moment_labels[k]) == 0.)
+
+			end
+		end			
+
+	end	
+
+	return nothing
+
+end
+
+function set_polynomial_constraints!(subproblems::Vector{SubProblem}, pop::POP, 
 	relaxation_order::Int64, 
 	moment_labels::Dict{Int64, Dict{Vector{UInt16}, Int64}}, 
-	variable_sets::Vector{Vector{UInt16}})
+	variable_sets::Vector{Vector{T}}) where T<:Integer
 
 	if pop.inequality_constraints != nothing
 		for polynomial in pop.inequality_constraints
 			k = assign_constraint_to_set(polynomial, variable_sets)
-			set_inequality_constraint!(subproblems.model[k], polynomial, 
-				relaxation_order, moment_labels[k])
+
+			set_inequality_constraint!(subproblems[k], polynomial, 
+				relaxation_order, moment_labels, variable_sets)
 
 		end	
 	end
@@ -110,8 +178,9 @@ function set_polynomial_constraints!(subproblems::Vector{Subproblem}, pop::POP,
 	if pop.equality_constraints != nothing
 		for polynomial in pop.equality_constraints
 			k = assign_constraint_to_set(polynomial, variable_sets)
-			set_equality_constraint!(subproblems.model[k], polynomial, 
-				relaxation_order, moment_labels[k])
+			
+			set_equality_constraint!(subproblems[k], polynomial, 
+				relaxation_order, moment_labels, variable_sets)
 
 		end	
 	end
@@ -155,7 +224,7 @@ function set_coupling_terms!(subproblems::Vector{SubProblem}, pair::Tuple{T, T},
 
 end
 
-function set_Lagrange_multipliers!(subproblems::Vector{Subproblem}, 
+function set_Lagrange_multipliers!(subproblems::Vector{SubProblem}, 
 	relaxation_order, moment_labels, variable_sets, max_coupling_order)
 
 	multiplier_information = MultiplierInformation[] 

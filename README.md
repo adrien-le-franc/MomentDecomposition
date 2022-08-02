@@ -7,6 +7,7 @@ This package implements JuMP models for the moment hierarchy in polynomial optim
 ### dual decomposition 
 
 * subgradient method dependency : choose a reliable package
+* parallelize build ?
 
 ### primal-dual decomposition
 
@@ -21,3 +22,4 @@ This package implements JuMP models for the moment hierarchy in polynomial optim
 ### general
 
 * normalize problem for numerical stability ?
+* create Type to dispatch relaxation models and share code ?

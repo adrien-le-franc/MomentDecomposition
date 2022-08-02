@@ -72,7 +72,7 @@ function set_probability_measure_constraint!(model::Model,
 
 end
 
-function set_inequality_constraint!(model::Model, polynomial::SparsePolynomial, 
+function set_inequality_constraint!(model::Model, pop::POP, polynomial::SparsePolynomial, 
 	relaxation_order::Int64, moment_labels::Dict{Vector{UInt16}, Int64})
 	
 	localizing_order = localizing_matrix_order(polynomial, relaxation_order)
@@ -103,7 +103,7 @@ function set_inequality_constraint!(model::Model, polynomial::SparsePolynomial,
 
 end
 
-function set_equality_constraint!(model::Model, polynomial::SparsePolynomial, 
+function set_equality_constraint!(model::Model, pop::POP, polynomial::SparsePolynomial, 
 	relaxation_order::Int64, moment_labels::Dict{Vector{UInt16}, Int64})
 	
 	localizing_order = localizing_matrix_order(polynomial, relaxation_order)
@@ -135,14 +135,14 @@ function set_polynomial_constraints!(model::Model, pop::POP, relaxation_order::I
 
 	if pop.inequality_constraints != nothing
 		for polynomial in pop.inequality_constraints
-			set_inequality_constraint!(model, polynomial, relaxation_order, moment_labels)
+			set_inequality_constraint!(model, pop, polynomial, relaxation_order, moment_labels)
 
 		end	
 	end
 
 	if pop.equality_constraints != nothing
 		for polynomial in pop.equality_constraints
-			set_equality_constraint!(model, polynomial, relaxation_order, moment_labels)
+			set_equality_constraint!(model, pop, polynomial, relaxation_order, moment_labels)
 
 		end	
 	end

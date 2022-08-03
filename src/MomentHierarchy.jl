@@ -11,8 +11,6 @@ using ChordalGraph
 
 # decomposition
 using Distributed
-using SubgradientMethods # unregistered package !
-const SGM = SubgradientMethods
  
 include("basics/utils.jl")
 include("basics/polynomials.jl")
@@ -27,5 +25,6 @@ include("sparsity/correlative.jl")
 
 include("models/dual_decomposition/subproblems.jl")
 include("models/dual_decomposition/master.jl")
+include("models/dual_decomposition/oracle.jl")
 
 end 

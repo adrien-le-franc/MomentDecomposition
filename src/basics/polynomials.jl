@@ -16,12 +16,12 @@ function SparsePolynomial(f::P, variables::Vector{V}) where {P <: Polynomial, V 
     coefficients = DynamicPolynomials.coefficients(f)
     support = [UInt16[] for i=1:n_temrs]
 
-    for i = 1:n_temrs
+    for i in 1:n_temrs
         indices = terms[i].z .> 0
         term_variables = terms[i].vars[indices]
         exponents = terms[i].z[indices]
-        for j = 1:length(term_variables)
-            variable_indice = ncbfind(variables, n, term_variables[j])
+        for j in 1:length(term_variables)
+            variable_indice = find_variable_indice(variables, n, term_variables[j])
             append!(support[i], variable_indice*ones(UInt16, exponents[j]))
         end
     end

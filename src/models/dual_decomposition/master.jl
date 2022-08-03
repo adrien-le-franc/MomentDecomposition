@@ -7,7 +7,7 @@ function build_dual_subproblems(variable_sets::Vector{Vector{T}},
 	relaxation_order::Int64) where T<:Integer
 
 	n_sets = length(variable_sets)
-	subproblems = [Subproblem(k) for k in 1:n_sets]
+	subproblems = [SubProblem(k) for k in 1:n_sets]
 	moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:n_sets)
 
 	for (k, set) in enumerate(variable_sets)
@@ -22,8 +22,8 @@ function build_dual_subproblems(variable_sets::Vector{Vector{T}},
 
 end
 
-function dual_decomposition_models(pop::POP, relaxation_order::Int64, 
-	variable_sets::Vector{Vector{T}}; max_coupling_order::Int64=maxInt64) where T<:Integer 
+function dual_decomposition_subproblems(pop::POP, relaxation_order::Int64, 
+	variable_sets::Vector{Vector{T}}; max_coupling_order::Int64=2*relaxation_order) where T<:Integer 
 	
 	subproblems, moment_labels = build_dual_subproblems(variable_sets, relaxation_order)
 

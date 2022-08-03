@@ -121,7 +121,7 @@ function set_inequality_constraint!(subproblem::SubProblem, polynomial::SparsePo
 			end
 		end
 
-		@constraint(model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
+		@constraint(subproblem.model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
 
 	end
 
@@ -148,7 +148,7 @@ function set_equality_constraint!(subproblem::SubProblem, polynomial::SparsePoly
 
 				labels = [monomial_product(alpha, beta, gamma) 
 					for gamma in polynomial.support]
-				@constraint(subproblem.model, linear_expression(model, polynomial, 
+				@constraint(subproblem.model, linear_expression(subproblem.model, polynomial, 
 					labels, moment_labels[k]) == 0.)
 
 			end
@@ -189,7 +189,7 @@ function set_polynomial_constraints!(subproblems::Vector{SubProblem}, pop::POP,
 
 end
 
-function set_coupling_terms!(subproblems::Vector{SubProblem}, pair::Tuple{T, T}, id::Int64,
+function set_coupling_terms!(subproblems::Vector{SubProblem}, pair::Vector{Int64}, id::Int64,
 	intersection::Vector{T}, 
 	relaxation_order::Int64, 
 	moment_labels::Dict{Int64, Dict{Vector{UInt16}, Int64}}, 
@@ -220,12 +220,13 @@ function set_coupling_terms!(subproblems::Vector{SubProblem}, pair::Tuple{T, T},
 	push!(subproblems[k_1].multiplier_ids, id)
 	push!(subproblems[k_2].multiplier_ids, id)
 
-	return coupling_terms_k_1, coupling_terms_k_2, pair_information
+	return pair_information
 
 end
 
 function set_Lagrange_multipliers!(subproblems::Vector{SubProblem}, 
-	relaxation_order, moment_labels, variable_sets, max_coupling_order)
+	relaxation_order::Int64, moment_labels::Dict{Int64, Dict{Vector{UInt16}, Int64}}, 
+	variable_sets::Vector{Vector{T}}, max_coupling_order::Int64) where T<:Integer
 
 	multiplier_information = MultiplierInformation[] 
 

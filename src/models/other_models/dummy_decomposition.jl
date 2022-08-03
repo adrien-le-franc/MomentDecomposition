@@ -196,7 +196,7 @@ function set_coupling_constraints!(model::Model, relaxation_order::Int64,
 	variable_sets::Vector{Vector{T}}, 
 	max_coupling_order::Int64) where T<:Integer
 
-	for pair in combinations(1:length(variable_sets), 2)
+	for (_, pair) in pairs(variable_sets)
 
 		k_1, k_2 = pair
 		intersection = intersect(variable_sets, pair)

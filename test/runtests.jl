@@ -15,7 +15,7 @@ using JuMP
 		
 		sparse_polynomial = MH.SparsePolynomial(f, x)
 
-		@test sparse_polynomial.coefficients == [1.; 1.; 1.; 1.]
+		@test sparse_polynomial.coefficients == [1., 1., 1., 1.]
 		@test sparse_polynomial.support == [[0x0001, 0x0001, 0x0001, 0x0001], 
 											[0x0002, 0x0002, 0x0002, 0x0002], 
 											[0x0003, 0x0003, 0x0003, 0x0003], 
@@ -142,33 +142,74 @@ end
 			@test length(moment_labels[1]) == 10
 
 			MH.set_polynomial_objective!(subproblems, pop, moment_labels, variable_sets)
-			h = AffExpr(0.)
-			add_to_expression!(h, subproblems[1].model[:y][5] + subproblems[1].model[:y][9])
-			@test subproblems[1].polynomial_objective == h
+			p = AffExpr(0.)
+			add_to_expression!(p, subproblems[1].model[:y][5] + subproblems[1].model[:y][9])
+			@test subproblems[1].polynomial_objective == p
 
-			MH.set_polynomial_constraints!(subproblems, pop, relaxation_order, 
+			MH.set_polynomial_constraints!(subproblems, pop, relaxation_order, # test order 2 ?
 				moment_labels, variable_sets)
 
 			@test num_constraints(subproblems[1].model, AffExpr, MOI.EqualTo{Float64}) == 1 
 			@test num_constraints(subproblems[1].model, AffExpr, MOI.GreaterThan{Float64}) == 1
 			@test num_constraints(subproblems[1].model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 1 
 
+			info = MH.set_coupling_terms!(subproblems, [1, 2], 7, [3], 1, moment_labels, 2)
+
+			@test subproblems[1].coupling_terms[1][1] == 1*subproblems[1].model[:y][7]
+			@test subproblems[2].coupling_terms[1][1] == -1*subproblems[2].model[:y][2]
+			@test length(subproblems[1].coupling_terms[1]) == 2
+			@test subproblems[1].multiplier_ids == [7]
+			@test info.moments == [[0x0003], [0x0003, 0x0003]]
+			@test info.pair == (1, 2)
+
+			subproblems = [MH.SubProblem(k) for k in 1:2] 
+			moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:2)
+
+			for (k, set) in enumerate(variable_sets)
+
+				MH.set_moment_variables!(subproblems[k].model, set, 2)
+				moment_labels[k] = MH.set_moment_matrix!(subproblems[k].model, set, 2)
+				MH.set_probability_measure_constraint!(subproblems[k].model, moment_labels[k]) 
+
+			end
+
+			MH.set_polynomial_constraints!(subproblems, pop, 2,	moment_labels, variable_sets)
+
+			@test num_constraints(subproblems[1].model, AffExpr, MOI.GreaterThan{Float64}) == 0
+			@test num_constraints(subproblems[1].model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 2
 
 		end
 
 		@testset "master" begin
 
+			subproblems, info = MH.dual_decomposition_subproblems(pop, 1, variable_sets, max_coupling_order=1)
+			@test info[1].moments == [[0x0003]]
+			@test info[1].pair == (1, 2)
+
 		end
 
 		@testset "oracle" begin
 
-		end
+			subproblems, info = MH.dual_decomposition_subproblems(pop, 1, variable_sets)
 
+			multiplier = MH.Multiplier([[1.2, 3.4]], info)
+			
+			@test MH.extract(multiplier, subproblems[1]) == [[1.2, 3.4]]
+
+			MH.update_dual_objective!(subproblems[1], [[1.2, 3.4]])
+			@test objective_function(subproblems[1].model) == subproblems[1].model[:y][5] + 
+				subproblems[1].model[:y][9] + 1.2*subproblems[1].model[:y][7] + 3.4*subproblems[1].model[:y][10]
+
+			oracle_data = [ [[1., 2.], [0.2]], [[3., 4.], [0.3]] ]
+
+			@test MH.dual_objective_value(oracle_data) == 0.5
+			@test MH.supergradient(subproblems, multiplier, oracle_data) == [[4., 6.]]
+
+		end
 
 	end
 
 	@testset "dummy decomposition" begin
-		
 		
 		model = Model()
 		moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:2)

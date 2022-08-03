@@ -2,7 +2,7 @@
 #
 # diverse usful functions 
 
-function ncbfind(A, l, a)
+function find_variable_indice(A::Vector{PolyVar{true}}, l::Int64, a::PolyVar{true})
 	"""
 	find position of a in ordered list A
 	borrowed from the TSSOS package
@@ -22,5 +22,3 @@ function ncbfind(A, l, a)
     end
     return 0
 end
-
-ncbfind(A, a) = ncbfind(A, length(A), a)

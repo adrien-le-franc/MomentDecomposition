@@ -196,9 +196,10 @@ end
 			
 			@test MH.extract(multiplier, subproblems[1]) == [[1.2, 3.4]]
 
-			MH.update_dual_objective!(subproblems[1], [[1.2, 3.4]])
-			@test objective_function(subproblems[1].model) == subproblems[1].model[:y][5] + 
-				subproblems[1].model[:y][9] + 1.2*subproblems[1].model[:y][7] + 3.4*subproblems[1].model[:y][10]
+			scale_factor = MH.update_dual_objective!(subproblems[1], [[2., -2.]])
+			@test scale_factor == 2.
+			@test objective_function(subproblems[1].model) == 0.5*subproblems[1].model[:y][5] + 
+				0.5*subproblems[1].model[:y][9] + 1.0*subproblems[1].model[:y][7] - 1.0*subproblems[1].model[:y][10]
 
 			oracle_data = [ [[1., 2.], [0.2]], [[3., 4.], [0.3]] ]
 

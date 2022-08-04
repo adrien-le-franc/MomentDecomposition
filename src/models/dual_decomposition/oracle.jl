@@ -4,24 +4,30 @@
 
 function update_dual_objective!(subproblem::SubProblem, submultiplier::Vector{Vector{Float64}})
 
-	# normalize ?
+	scale_factor = maximum([maximum(abs.(values(subproblem.polynomial_objective.terms))), 
+		[maximum(abs.(l)) for l in submultiplier]...])
 
-	@objective(subproblem.model, Min, 
-		subproblem.polynomial_objective + sum(subproblem.coupling_terms[k]'*submultiplier[k] 
-		for k in 1:length(submultiplier)))
+	if scale_factor == 0.
+		@objective(subproblem.model, Min, 0.)
+	else
+		@objective(subproblem.model, Min, 
+			(subproblem.polynomial_objective + sum(subproblem.coupling_terms[k]'*submultiplier[k] 
+			for k in 1:length(submultiplier))) / scale_factor )
+	end
 
-	return nothing
+	return scale_factor
 
 end
 
 function call_subproblem_oracle!(subproblem::SubProblem, submultiplier::Vector{Vector{Float64}})
 
-	update_dual_objective!(subproblem, submultiplier)
+	scale_factor = update_dual_objective!(subproblem, submultiplier)
 	optimize!(subproblem.model)
 
 	# check optimizer status !!
 
-	return push!([value.(coupling_term) for coupling_term in subproblem.coupling_terms], [objective_value(subproblem.model)]) # check super/sub gradient !!
+	return push!([value.(coupling_term) for coupling_term in subproblem.coupling_terms], 
+		[objective_value(subproblem.model) * scale_factor]) # check super/sub gradient !!
 
 end
 
@@ -49,7 +55,7 @@ end
 function call_maximization_oracle!(subproblems::Vector{SubProblem}, 
 	multiplier::Multiplier, oracle_data::Vector{Vector{Vector{Float64}}})
 
-	oracle_data = pmap(subproblem->call_subproblem_oracle!(subproblem, 
+	oracle_data[:] = pmap(subproblem->call_subproblem_oracle!(subproblem, # perf ???
 		extract(multiplier, subproblem)), subproblems)
 
 	return nothing 

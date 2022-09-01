@@ -118,7 +118,8 @@ end
 	@testset "decomposition tools" begin
 		
 		@test MH.assign_constraint_to_set(pop.inequality_constraints[1], variable_sets) == 1
-		@test collect(MH.pairs(variable_sets)) == [(1, [1, 2])]
+		@test MH.assign_constraint_to_sets(pop.inequality_constraints[1], variable_sets) == [1]
+		@test collect(MH.pairs(variable_sets)) == [[1, 2]]
 		@test MH.intersect(variable_sets, [1, 2]) == [3]
 
 	end

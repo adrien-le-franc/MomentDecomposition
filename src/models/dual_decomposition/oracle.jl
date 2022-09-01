@@ -4,8 +4,8 @@
 
 function update_dual_objective!(subproblem::SubProblem, submultiplier::Vector{Vector{Float64}})
 
-	scale_factor = maximum([maximum(abs.(values(subproblem.polynomial_objective.terms))), 
-		[maximum(abs.(l)) for l in submultiplier]...])
+	scale_factor = maximum(vcat(abs.(values(subproblem.polynomial_objective.terms)), 
+								[maximum(abs.(l)) for l in submultiplier]))
 
 	if scale_factor == 0.
 		@objective(subproblem.model, Min, 0.)
@@ -25,6 +25,15 @@ function call_subproblem_oracle!(subproblem::SubProblem, submultiplier::Vector{V
 	optimize!(subproblem.model)
 
 	# check optimizer status !!
+	"""
+	println(solution_summary(subproblem.model))
+	println(termination_status(subproblem.model))
+	println(primal_status(subproblem.model))
+	"""
+
+	if primal_status(subproblem.model) != FEASIBLE_POINT
+		println("WARNING: solution returned is primal unfeasible")
+	end
 
 	return push!([value.(coupling_term) for coupling_term in subproblem.coupling_terms], 
 		[objective_value(subproblem.model) * scale_factor]) # check super/sub gradient !!

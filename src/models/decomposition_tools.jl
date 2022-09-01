@@ -18,8 +18,23 @@ function assign_constraint_to_set(polynomial::SparsePolynomial,
 
 end
 
+function assign_constraint_to_sets(polynomial::SparsePolynomial, 
+	variable_sets::Vector{Vector{T}}) where T<:Integer
+	
+	set_ids = T[]
+
+	for (k, set) in enumerate(variable_sets)
+		if issubset(unique(vcat(polynomial.support...)), set)
+			push!(set_ids, k)
+		end
+	end
+
+	return set_ids
+
+end
+
 function pairs(variable_sets::Vector{Vector{T}}) where T<:Integer
-	return enumerate(combinations(1:length(variable_sets), 2))
+	return combinations(1:length(variable_sets), 2)
 end
 
 function intersect(variable_sets::Vector{Vector{T}}, 

@@ -6,8 +6,11 @@ This package implements JuMP models for the moment hierarchy in polynomial optim
 
 ### dual decomposition 
 
-* subgradient method dependency : choose a reliable package
 * parallelize build ?
+
+#### subproblems
+
+* distribute each constraint to all supporting variable subsets ? (so far, yes)
 
 ### primal-dual decomposition
 

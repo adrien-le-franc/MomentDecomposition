@@ -24,13 +24,6 @@ function call_subproblem_oracle!(subproblem::SubProblem, submultiplier::Vector{V
 	scale_factor = update_dual_objective!(subproblem, submultiplier)
 	optimize!(subproblem.model)
 
-	# check optimizer status !!
-	"""
-	println(solution_summary(subproblem.model))
-	println(termination_status(subproblem.model))
-	println(primal_status(subproblem.model))
-	"""
-
 	if primal_status(subproblem.model) != FEASIBLE_POINT
 		println("WARNING: solution returned is primal unfeasible")
 	end
@@ -54,6 +47,17 @@ function supergradient(subproblems::Vector{SubProblem}, multiplier::Multiplier,
 		oracle_data[information.pair[2]][searchsortedfirst(subproblems[information.pair[2]].multiplier_ids, k)] 
 
 		for (k, information) in enumerate(multiplier.information)]
+
+end
+
+function supergradient_norm(subproblems::Vector{SubProblem}, multiplier::Multiplier, 
+	oracle_data::Vector{Vector{Vector{Float64}}})
+
+	return norm(vcat([
+		oracle_data[information.pair[1]][searchsortedfirst(subproblems[information.pair[1]].multiplier_ids, k)] +
+		oracle_data[information.pair[2]][searchsortedfirst(subproblems[information.pair[2]].multiplier_ids, k)] 
+
+		for (k, information) in enumerate(multiplier.information)]...))
 
 end
 

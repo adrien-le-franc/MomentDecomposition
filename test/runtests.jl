@@ -5,6 +5,7 @@ using MomentHierarchy
 MH = MomentHierarchy
 using DynamicPolynomials
 using JuMP
+using LinearAlgebra
 
 @testset "basics" begin
 
@@ -206,6 +207,7 @@ end
 
 			@test MH.dual_objective_value(oracle_data) == 0.5
 			@test MH.supergradient(subproblems, multiplier, oracle_data) == [[4., 6.]]
+			@test MH.supergradient_norm(subproblems, multiplier, oracle_data) == norm([4., 6.])
 
 		end
 

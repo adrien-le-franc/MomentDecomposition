@@ -125,6 +125,19 @@ end
 
 	end
 
+	@testset "sparsity" begin
+
+		model = Model()
+		variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
+
+		MH.set_moment_variables!(model, pop, relaxation_order)
+		moment_labels = MH.set_moment_matrices!(model, pop, relaxation_order, variable_sets)
+		
+		@test length(keys(moment_labels)) == 22
+		@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 2
+
+	end
+
 	@testset "dual decomposition" begin
 		
 		@testset "subproblems" begin

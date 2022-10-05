@@ -18,6 +18,7 @@ include("basics/moments.jl")
 
 include("models/dense.jl")
 include("models/decomposition_tools.jl")
+include("models/correlative_sparsity.jl")
 include("models/other_models/nlp.jl")
 include("models/other_models/dummy_decomposition.jl")
 

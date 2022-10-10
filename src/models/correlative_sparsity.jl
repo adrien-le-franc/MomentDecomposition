@@ -8,8 +8,10 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 	sets::Vector{Vector{T}}) where T <: Integer
 
 	moment_labels = Dict{Vector{UInt16}, Int64}() 
+
 	n_monomials = n_moments(pop, relaxation_order)
 
+	y = Vector{VariableRef}()
 	count = 0
 
 	for set in sets
@@ -23,11 +25,14 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 				label = monomial_product(alpha, beta)
 
 				if !(label in keys(moment_labels))
+
 					count += 1
+					push!(y, @variable(model, base_name="y_$(count)"))
 					moment_labels[label] = count
+				
 				end
 
-				M[i, j] = model[:y][moment_labels[label]]
+				M[i, j] = y[moment_labels[label]]
 
 			end
 		end
@@ -36,7 +41,7 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 
 	end
 
-	delete.(model, model[:y][count+1:end])
+	model[:y] = y
 
 	return moment_labels
 
@@ -156,7 +161,6 @@ function set_polynomial_constraints!(model::Model, pop::POP, relaxation_order::I
 		for polynomial in pop.inequality_constraints
 			set_inequality_constraint!(model, pop, polynomial, relaxation_order, 
 				moment_labels, variable_sets)
-
 		end	
 	end
 
@@ -164,7 +168,6 @@ function set_polynomial_constraints!(model::Model, pop::POP, relaxation_order::I
 		for polynomial in pop.equality_constraints
 			set_equality_constraint!(model, pop, polynomial, relaxation_order, 
 				moment_labels, variable_sets)
-
 		end	
 	end
 	
@@ -179,7 +182,9 @@ function sparse_relaxation_model(pop::POP, relaxation_order::Int64,
 
 	model = Model()
 
-	set_moment_variables!(model, pop, relaxation_order)
+	#set_moment_variables!(model, pop, relaxation_order) # trouver autre chose ...
+
+
 	moment_labels = set_moment_matrices!(model, pop, relaxation_order, variable_sets)
 	set_objective!(model, pop, moment_labels)
 	set_probability_measure_constraint!(model, moment_labels)

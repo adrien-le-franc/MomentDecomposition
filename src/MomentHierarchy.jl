@@ -5,6 +5,9 @@ using DynamicPolynomials
 using Combinatorics
 using LinearAlgebra
 
+# certification
+using SparseArrays
+
 # sparsity
 using Graphs
 using ChordalGraph
@@ -27,5 +30,8 @@ include("sparsity/correlative.jl")
 include("models/dual_decomposition/subproblems.jl")
 include("models/dual_decomposition/master.jl")
 include("models/dual_decomposition/oracle.jl")
+
+include("models/certification/build_model.jl")
+include("models/certification/oracle.jl")
 
 end 

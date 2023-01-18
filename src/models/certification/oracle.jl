@@ -39,28 +39,63 @@ function call_f_and_g!(y::Vector{Float64}, grad::Vector{Float64}, phi::Phi_matri
 		phi.M = evaluate_matrix(y, phi) 
 	end
 
-	grad[phi.address] = -[dot(phi.A_j[i], phi.M) for i in 1:length(phi.A_j)]
+	grad[phi.address] = -[dot(Symmetric(phi.A_j[i]), phi.M) for i in 1:length(phi.A_j)] # avoid Symmetric ?
 	
 	return -0.5*norm(phi.M)^2 
 
 end
 
 
-function call_dual_obj!() end
+function call_dual_obj!(y::Vector{Float64}, dual_model::DualModel)
+
+	obj = call_f!(y, dual_model.phi_moment, project=true)
+
+	for phi in dual_model.phi_inequality.matrix
+		obj += call_f!(y, phi, project=true)
+	end
+
+	for phi in dual_model.phi_inequality.scalar
+		obj += call_f(y, phi)
+	end
+
+	for phi in dual_model.phi_equality.matrix
+		obj += call_f!(y, phi)
+	end
+
+	for phi in dual_model.phi_equality.scalar
+		obj += call_f!(y, phi)
+	end	
+
+	obj += call_f(y, dual_model.phi_0)
+	obj += call_f(y, dual_model.linear_term)
+
+	return obj	 
+
+end
 
 function call_dual_obj_and_grad!(y::Vector{Float64}, grad::Vector{Float64}, dual_model::DualModel)
 
-	obj, grad[:] = call_f_and_g!(y, grad, dual_model.phi_moment)
+	obj, grad[:] = call_f_and_g!(y, grad, dual_model.phi_moment, project=true)
 
-	for phi in dual_model.phi_inequality
+	for phi in dual_model.phi_inequality.matrix
+		obj += call_f_and_g!(y, grad, phi, project=true)
+	end
+
+	for phi in dual_model.phi_inequality.scalar
 		obj += call_f_and_g!(y, grad, phi)
 	end
 
-	for phi in dual_model.phi_equality
+	for phi in dual_model.phi_equality.matrix
 		obj += call_f_and_g!(y, grad, phi)
 	end
+
+	for phi in dual_model.phi_equality.scalar
+		obj += call_f_and_g!(y, grad, phi)
+	end	
 
 	obj += call_f_and_g!(y, grad, dual_model.phi_0)
 	obj += call_f_and_g!(y, grad, dual_model.linear_term)
+
+	return obj
 
 end

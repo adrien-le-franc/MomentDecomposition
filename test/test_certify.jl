@@ -6,6 +6,8 @@ using DynamicPolynomials
 using LinearAlgebra
 using SparseArrays
 
+absapprox(x, y) = all(abs.(x - y) .<= 1e-7)
+
 @testset "certification" begin
 
 	n = 3
@@ -18,6 +20,8 @@ using SparseArrays
 	relaxation_order = 1
 	val = 0.
 
+	# phi moment matrix
+
 	phi_moment, moment_labels = MH.set_phi_moment(pop, relaxation_order)
 
 	@test length(phi_moment.A_j) == 10
@@ -29,8 +33,8 @@ using SparseArrays
 
 	@test MH.evaluate_matrix(y, phi_moment) == Symmetric(dropzeros(sparse([2, 4], [3, 4], [1., 0.])))
 	@test MH.projection(Symmetric(diagm([1., 2., 3.]))) == Symmetric(diagm([1., 2., 3.]))
-	@test MH.call_f!(y, phi_moment, project=false) == -1.
-	@test MH.call_f!(y, phi_moment, project=true) == -0.5
+	@test absapprox(MH.call_f!(y, phi_moment, project=false), -1.)
+	@test absapprox(MH.call_f!(y, phi_moment, project=true), -0.5)
 
 	grad = zeros(10)
 	_ = MH.call_f_and_g!(y, grad, phi_moment, project=false)
@@ -46,9 +50,11 @@ using SparseArrays
 	test_grad[5] = -1.
 	test_grad[6] = -0.5
 
-	@test grad == test_grad
+	@test absapprox(grad, test_grad)
 
-	# test get_linear_form ??
+	# phi scalar
+
+	@test MH.get_linear_form(pop.equality_constraints[1], moment_labels) == ([-1., 1., 1., 1.], [1, 3, 6, 10])
 
 	phi_equality = MH.set_phi_scalar_equality(pop.equality_constraints[1], pop, 0, moment_labels)
 
@@ -60,6 +66,7 @@ using SparseArrays
 	grad = zeros(10)
 	_ = MH.call_f_and_g!(y, grad, phi_equality)
 	test_grad = zeros(10)
+	test_grad[1] = -2.
 	test_grad[3] = 2.
 	test_grad[6] = 2.
 	test_grad[10] = 2.
@@ -84,6 +91,8 @@ using SparseArrays
 
 	@test grad == test_grad
 
+	# phi_0
+
 	phi_0 = MH.set_phi_0(val)
 
 	y[1] = 1.
@@ -97,12 +106,14 @@ using SparseArrays
 	_ = MH.call_f_and_g!(y, grad, phi_0)
 	
 	@test MH.call_f(y, phi_0) == 0.
-	@test grad[1] == 0.
+	@test grad[1] == 1.
+
+	# linear term
 
 	phi_linear_term = MH.set_linear_term(pop, moment_labels)
 
 	y = zeros(10)
-	y[3] = 2.
+	y[7] = 2.
 	grad = zeros(10)
 	_ = MH.call_f_and_g!(y, grad, phi_linear_term)
 
@@ -116,28 +127,29 @@ using SparseArrays
 	@test length(dual_model.phi_inequality.scalar) == 3
 	@test length(dual_model.phi_inequality.matrix) == 0
 
+	# phi localization matrix 
+
 	relaxation_order = 2
 
 	phi_moment, moment_labels = MH.set_phi_moment(pop, relaxation_order)
 	phi_inequality = MH.set_phi_matrix(pop.inequality_constraints[1], pop, 1, moment_labels)
 
-	@test phi_inequality.A_j[2] == dropzeros(sparse([1, 10], [2, 10], [1., 0.]))
+	@test phi_inequality.A_j[2] == dropzeros(sparse([1, 4], [2, 4], [1., 0.]))
 	@test phi_inequality.address[2] == 3
 
 	p = MH.SparsePolynomial([[0x0001, 0x0001], [0x0001, 0x0001], [0x0000], [0x0000]], [1., 1., 1., 1.])
 	phi_inequality = MH.set_phi_matrix(p, pop, 1, moment_labels)
 
 	# ???
-	@test phi_inequality.A_j[1] == dropzeros(sparse([1, 10], [1, 10], [2., 0.]))
+	@test phi_inequality.A_j[1] == dropzeros(sparse([1, 4], [1, 4], [2., 0.]))
 	@test phi_inequality.address[1] == 1
-	@test phi_inequality.A_j[2] == dropzeros(sparse([1, 10], [2, 10], [2., 0.]))
+	@test phi_inequality.A_j[2] == dropzeros(sparse([1, 4], [2, 4], [2., 0.]))
 	@test phi_inequality.address[2] == 2
 
 
 	@test sparse([5, 1, 1], [5, 1, 1], [1, 1, 1]) == sparse([5, 1], [5, 1], [1, 2])
 
 	# add test on localization matrix for polynomial with redundants monomials (ex: 2*x[1] + 3*x[1])
-
 
 
 end

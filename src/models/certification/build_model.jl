@@ -31,7 +31,7 @@ function set_phi_moment(pop::POP, relaxation_order::Int64)
 
 	moment_labels = Dict{Vector{UInt16}, Int64}()
 	matrix_size = n_moments(pop, relaxation_order)
-	entries_A_j = Dict{Int16, Matrix{Float64}}()
+	entries_A_j = Dict{UInt16, Matrix{Float64}}()
 
 	count = 0
 
@@ -68,7 +68,7 @@ function set_phi_matrix(polynomial::SparsePolynomial, pop::POP, localizing_order
 	entries_A_j = Dict{Vector{UInt16}, Matrix{Float64}}()
 
 	matrix_size = n_moments(pop, localizing_order)
-	entries_A_j = Dict{Int16, Matrix{Float64}}()
+	entries_A_j = Dict{UInt16, Matrix{Float64}}()
 
 	for (j, alpha) in moment_columns(pop, localizing_order)
 		for (i, beta) in moment_rows(pop, localizing_order, j)
@@ -101,7 +101,7 @@ end
 
 function get_linear_form(polynomial::SparsePolynomial, moment_labels::Dict{Vector{UInt16}, Int64})
 
-	entries_a_j = Dict{Int16, Float64}()
+	entries_a_j = Dict{UInt16, Float64}()
 
 	for (support, coefficient) in terms(polynomial)
 

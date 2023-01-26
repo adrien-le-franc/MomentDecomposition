@@ -32,7 +32,10 @@ absapprox(x, y) = all(abs.(x - y) .<= 1e-7)
 	y[5] = 1.
 
 	@test MH.evaluate_matrix(y, phi_moment) == Symmetric(dropzeros(sparse([2, 4], [3, 4], [1., 0.])))
-	@test MH.projection(Symmetric(diagm([1., 2., 3.]))) == Symmetric(diagm([1., 2., 3.]))
+	@test MH.projection(Symmetric(diagm([1., 2., -3.]))) == Symmetric(diagm([1., 2., 0.]))
+
+
+
 	@test absapprox(MH.call_f!(y, phi_moment, project=false), -1.)
 	@test absapprox(MH.call_f!(y, phi_moment, project=true), -0.5)
 
@@ -56,7 +59,7 @@ absapprox(x, y) = all(abs.(x - y) .<= 1e-7)
 
 	@test MH.get_linear_form(pop.equality_constraints[1], moment_labels) == ([-1., 1., 1., 1.], [1, 3, 6, 10])
 
-	phi_equality = MH.set_phi_scalar_equality(pop.equality_constraints[1], pop, 0, moment_labels)
+	phi_equality = MH.set_phi_scalar_equality(pop.equality_constraints[1], pop, moment_labels)
 
 	y = zeros(10)
 	y[10] = -2.
@@ -73,7 +76,7 @@ absapprox(x, y) = all(abs.(x - y) .<= 1e-7)
 
 	@test grad == test_grad
 
-	phi_inequality = MH.set_phi_scalar_inequality(pop.inequality_constraints[1], pop, 0, moment_labels)
+	phi_inequality = MH.set_phi_scalar_inequality(pop.inequality_constraints[1], pop, moment_labels)
 
 	y = zeros(10)
 	y[2] = -2.
@@ -127,7 +130,7 @@ absapprox(x, y) = all(abs.(x - y) .<= 1e-7)
 	@test length(dual_model.phi_inequality.scalar) == 3
 	@test length(dual_model.phi_inequality.matrix) == 0
 
-	# phi localization matrix 
+	# phi localization matrix ### add test to check if equalities and inequalities are correct
 
 	relaxation_order = 2
 

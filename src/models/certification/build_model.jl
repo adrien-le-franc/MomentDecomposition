@@ -1,9 +1,10 @@
 # julia 1.6.5
 
+# same types for equalities and inequalities may be a bad idea...
 
 mutable struct Phi_scalar
 	f::Function
-	f_and_g!::Function 
+	f_and_g!::Function
 end
 
 mutable struct Phi_matrix 
@@ -120,12 +121,11 @@ function get_linear_form(polynomial::SparsePolynomial, moment_labels::Dict{Vecto
 
 end
 
-function set_phi_scalar_inequality(polynomial::SparsePolynomial, pop::POP, relaxation_order::Int64, 
-	moment_labels::Dict{Vector{UInt16}, Int64})
+function set_phi_scalar_inequality(polynomial::SparsePolynomial, pop::POP, moment_labels::Dict{Vector{UInt16}, Int64})
 
 	a_j, address = get_linear_form(polynomial, moment_labels)
 
-	@views f(y::Vector{Float64}) = -0.5*max(a_j'*y[address], 0)^2 
+	@views f(y::Vector{Float64}) = -0.5*max(a_j'*y[address], 0.)^2 
 
 	@views function f_and_g!(y::Vector{Float64}, grad::Vector{Float64}) 
 
@@ -136,13 +136,11 @@ function set_phi_scalar_inequality(polynomial::SparsePolynomial, pop::POP, relax
 
 	end
 
-
 	return Phi_scalar(f, f_and_g!)
 
 end
 
-function set_phi_scalar_equality(polynomial::SparsePolynomial, pop::POP, relaxation_order::Int64, 
-	moment_labels::Dict{Vector{UInt16}, Int64})
+function set_phi_scalar_equality(polynomial::SparsePolynomial, pop::POP, moment_labels::Dict{Vector{UInt16}, Int64})
 
 	a_j, address = get_linear_form(polynomial, moment_labels)
 
@@ -161,22 +159,50 @@ function set_phi_scalar_equality(polynomial::SparsePolynomial, pop::POP, relaxat
 
 end
 
-function set_phi_localizing(constraints::Union{Nothing, Vector{SparsePolynomial}}, 
-	pop::POP, relaxation_order::Int64, moment_labels::Dict{Vector{UInt16}, Int64})
+function set_phi_inequality(pop::POP, relaxation_order::Int64, moment_labels::Dict{Vector{UInt16}, Int64})
 
 	phi_matrix = Vector{Phi_matrix}()
 	phi_scalar = Vector{Phi_scalar}()
 
-	for polynomial in constraints
+	if pop.inequality_constraints == nothing
+		return Phi_localizing(phi_scalar, phi_matrix)
+	else
+		for polynomial in pop.inequality_constraints
 
-		localizing_order = localizing_matrix_order(polynomial, relaxation_order)
+			localizing_order = localizing_matrix_order(polynomial, relaxation_order)
 
-		if localizing_order == 0
-			push!(phi_scalar, set_phi_scalar_equality(polynomial, pop, relaxation_order, moment_labels))
-		else
-			push!(phi_matrix, set_phi_matrix_equality(polynomial, pop, relaxation_order, moment_labels))
+			if localizing_order == 0
+				push!(phi_scalar, set_phi_scalar_inequality(polynomial, pop, moment_labels))
+			else
+				push!(phi_matrix, set_phi_matrix(polynomial, pop, localizing_order, moment_labels)) 
+			end
+
 		end
+	end
 
+	return Phi_localizing(phi_scalar, phi_matrix)
+
+end
+
+function set_phi_equality(pop::POP, relaxation_order::Int64, moment_labels::Dict{Vector{UInt16}, Int64})
+
+	phi_matrix = Vector{Phi_matrix}()
+	phi_scalar = Vector{Phi_scalar}()
+
+	if pop.equality_constraints == nothing
+		return Phi_localizing(phi_scalar, phi_matrix)
+	else
+		for polynomial in pop.equality_constraints
+
+			localizing_order = localizing_matrix_order(polynomial, relaxation_order)
+
+			if localizing_order == 0
+				push!(phi_scalar, set_phi_scalar_equality(polynomial, pop, moment_labels))
+			else
+				push!(phi_matrix, set_phi_matrix(polynomial, pop, localizing_order, moment_labels)) 
+			end
+
+		end
 	end
 
 	return Phi_localizing(phi_scalar, phi_matrix)
@@ -232,8 +258,8 @@ end
 function build_dual_model(pop::POP, relaxation_order::Int64, value_to_certify::Float64)
 
 	phi_moment, moment_labels = set_phi_moment(pop, relaxation_order)
-	phi_inequality = set_phi_localizing(pop.inequality_constraints, pop, relaxation_order, moment_labels)
-	phi_equality = set_phi_localizing(pop.equality_constraints, pop, relaxation_order, moment_labels)
+	phi_inequality = set_phi_inequality(pop, relaxation_order, moment_labels)
+	phi_equality = set_phi_equality(pop, relaxation_order, moment_labels)
 
 	phi_0 = set_phi_0(value_to_certify)
 	phi_linear_term = set_linear_term(pop, moment_labels)

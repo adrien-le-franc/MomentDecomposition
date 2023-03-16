@@ -81,14 +81,12 @@ end
 	
 	relaxation_order = 1
 
-	@testset "dense model" begin
+	@testset "moment" begin
 		
 		model = Model()
-
-		MH.set_moment_variables!(model, pop, relaxation_order)
-		@test length(model[:y]) == 28
+		variable_sets = [collect(1:6)]
 		
-		moment_labels = MH.set_moment_matrix!(model, pop, relaxation_order)
+		moment_labels = MH.set_moment_matrices!(model, pop, relaxation_order, variable_sets)
 		@test length(keys(moment_labels)) == 28
 		
 		@test MH.linear_expression(model, pop.objective, moment_labels) == model[:y][5] + 
@@ -99,20 +97,40 @@ end
 			model[:y][14] + model[:y][20] + model[:y][27]
 
 		MH.set_probability_measure_constraint!(model, moment_labels)
-		MH.set_polynomial_constraints!(model, pop, relaxation_order, moment_labels)
+		MH.set_polynomial_constraints!(model, pop, relaxation_order, moment_labels, variable_sets)
 
 		@test num_constraints(model, AffExpr, MOI.EqualTo{Float64}) == 3
 		@test num_constraints(model, AffExpr, MOI.GreaterThan{Float64}) == 1
 		@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 1
 
 		model = Model()
-		MH.set_moment_variables!(model, pop, 2)
-		moment_labels = MH.set_moment_matrix!(model, pop, 2)
-		MH.set_polynomial_constraints!(model, pop, 2, moment_labels)
+		moment_labels = MH.set_moment_matrices!(model, pop, 2, variable_sets)
+		MH.set_polynomial_constraints!(model, pop, 2, moment_labels, variable_sets)
 
 		@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 2	
 
 	end
+
+	@testset "sos" begin
+		
+		model = Model()
+		@variable(model, t)
+		variable_sets = [collect(1:6)]
+		
+		monomial_index = MH.set_X_0!(model, variable_sets, relaxation_order)
+		@test length(keys(monomial_index)) == 28
+		@test length(model[:X_0]) == 1
+
+		MH.set_X_j!(model, pop, monomial_index, variable_sets, relaxation_order)
+		@test length(model[:X_ineq]) == 1
+		@test length(model[:X_eq]) == 2
+
+		MH.set_SOS_constraints!(model, pop, monomial_index)
+		@test num_constraints(model, AffExpr, MOI.EqualTo{Float64}) == 28
+		@test num_constraints(model, AffExpr, MOI.GreaterThan{Float64}) == 1
+		@test num_constraints(model, Vector{VariableRef}, MOI.PositiveSemidefiniteConeTriangle) == 1
+
+	end	
 
 	variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
 

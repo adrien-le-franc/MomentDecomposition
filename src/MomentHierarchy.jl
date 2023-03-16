@@ -19,14 +19,16 @@ include("basics/utils.jl")
 include("basics/polynomials.jl")
 include("basics/moments.jl")
 
-include("models/dense.jl")
-include("models/decomposition_tools.jl")
-include("models/correlative_sparsity.jl")
+include("models/hierarchies/utils.jl")
+include("models/hierarchies/moment.jl")
+include("models/hierarchies/sos.jl")
+
 include("models/other_models/nlp.jl")
 include("models/other_models/dummy_decomposition.jl")
 
 include("sparsity/correlative.jl")
 
+include("models/dual_decomposition/utils.jl")
 include("models/dual_decomposition/subproblems.jl")
 include("models/dual_decomposition/master.jl")
 include("models/dual_decomposition/oracle.jl")

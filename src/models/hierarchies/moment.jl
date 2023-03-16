@@ -1,16 +1,13 @@
 # julia 1.6
 #
-# dense models for the hierarchy of moment relaxations
-
+# generic sparse model for the hierarchy of moment relaxations
 
 
 function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64, 
 	sets::Vector{Vector{T}}) where T <: Integer
 
 	moment_labels = Dict{Vector{UInt16}, Int64}() 
-
 	n_monomials = n_moments(pop, relaxation_order)
-
 	y = Vector{VariableRef}()
 	count = 0
 
@@ -27,7 +24,7 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 				if !(label in keys(moment_labels))
 
 					count += 1
-					push!(y, @variable(model, base_name="y_$(count)"))
+					push!(y, @variable(model, base_name="y_$(count)")) # base_name can be costly for large models: remove ?
 					moment_labels[label] = count
 				
 				end
@@ -37,7 +34,7 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 			end
 		end
 
-		@constraint(model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
+		@constraint(model, Symmetric(M) >= 0, PSDCone())
 
 	end
 
@@ -46,16 +43,6 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 	return moment_labels
 
 end
-
-"""
-m = Model()
-@variable(m, y[1:10])
-delete.(m, y[7:10])
-@constraint(m, y[1] >= 0)
-@objective(m, Min, y[1])
-set_optimizer(m, Mosek.Optimizer)
-optimize!(m)
-
 
 function linear_expression(model::Model, f::SparsePolynomial, 
     moment_labels::Dict{Vector{UInt16}, Int64})
@@ -72,23 +59,6 @@ function linear_expression(model::Model, f::SparsePolynomial,
                 for (i, coefficient) in enumerate(f.coefficients))
 
 end
-
-function set_objective!(model::Model, pop::POP, moment_labels::Dict{Vector{UInt16}, Int64})
-
-	@objective(model, Min, linear_expression(model, pop.objective, moment_labels))
-	return nothing
-
-end
-
-function set_probability_measure_constraint!(model::Model, 
-	moment_labels::Dict{Vector{UInt16}, Int64})
-	
-	@constraint(model, model[:y][moment_labels[UInt16[]]] == 1.)
-	return nothing
-
-end
-
-"""
 
 function set_inequality_constraint!(model::Model, pop::POP, polynomial::SparsePolynomial, 
 	relaxation_order::Int64, moment_labels::Dict{Vector{UInt16}, Int64}, 
@@ -115,7 +85,7 @@ function set_inequality_constraint!(model::Model, pop::POP, polynomial::SparsePo
 			end
 		end
 
-		@constraint(model, LinearAlgebra.Symmetric(M) >= 0, PSDCone())
+		@constraint(model, Symmetric(M) >= 0, PSDCone())
 
 	end
 
@@ -171,25 +141,34 @@ function set_polynomial_constraints!(model::Model, pop::POP, relaxation_order::I
 		end	
 	end
 	
-
 	return nothing
 
 end
 
+function set_objective!(model::Model, pop::POP, moment_labels::Dict{Vector{UInt16}, Int64})
 
-function sparse_relaxation_model(pop::POP, relaxation_order::Int64, 
-	variable_sets::Vector{Vector{T}}) where T <: Integer
+	@objective(model, Min, linear_expression(model, pop.objective, moment_labels))
+	return nothing
+
+end
+
+function set_probability_measure_constraint!(model::Model, 
+	moment_labels::Dict{Vector{UInt16}, Int64})
+	
+	@constraint(model, model[:y][moment_labels[UInt16[]]] == 1.)
+	return nothing
+
+end
+
+function moment_relaxation_model(pop::POP, relaxation_order::Int64, 
+	sparsity_sets::Vector{Vector{T}}=dense_relaxation_set(pop)) where T <: Integer
 
 	model = Model()
 
-	#set_moment_variables!(model, pop, relaxation_order) # trouver autre chose ...
-
-
-	moment_labels = set_moment_matrices!(model, pop, relaxation_order, variable_sets)
+	moment_labels = set_moment_matrices!(model, pop, relaxation_order, sparsity_sets)
 	set_objective!(model, pop, moment_labels)
 	set_probability_measure_constraint!(model, moment_labels)
-
-	set_polynomial_constraints!(model, pop, relaxation_order, moment_labels, variable_sets)
+	set_polynomial_constraints!(model, pop, relaxation_order, moment_labels, sparsity_sets)
 
 	return model
 

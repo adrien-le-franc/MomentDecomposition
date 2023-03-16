@@ -3,21 +3,6 @@
 # decomposition tools for the hierarchy of moment relaxations
 
 
-function assign_constraint_to_set(polynomial::SparsePolynomial, 
-	variable_sets::Vector{Vector{T}}) where T<:Integer
-
-	for (k, set) in enumerate(variable_sets)
-		if issubset(unique(vcat(polynomial.support...)), set)
-			return k
-		end
-	end
-
-	error("could not decompose constraint polynomial $(polynomial) over variable sets")
-
-	return nothing
-
-end
-
 function assign_constraint_to_sets(polynomial::SparsePolynomial, 
 	variable_sets::Vector{Vector{T}}) where T<:Integer
 	

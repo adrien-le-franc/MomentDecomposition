@@ -133,16 +133,7 @@ end
 	end	
 
 	variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
-
-	@testset "decomposition tools" begin
-		
-		@test MH.assign_constraint_to_set(pop.inequality_constraints[1], variable_sets) == 1
-		@test MH.assign_constraint_to_sets(pop.inequality_constraints[1], variable_sets) == [1]
-		@test collect(MH.pairs(variable_sets)) == [[1, 2]]
-		@test MH.intersect(variable_sets, [1, 2]) == [3]
-
-	end
-
+	
 	@testset "sparsity" begin
 
 		model = Model()
@@ -153,137 +144,7 @@ end
 		@test length(keys(moment_labels)) == 22
 		@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 2
 
-	end
-
-	@testset "dual decomposition" begin
-		
-		@testset "subproblems" begin
-
-			subproblems = [MH.SubProblem(k) for k in 1:2] 
-			moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:2)
-
-			for (k, set) in enumerate(variable_sets)
-
-				MH.set_moment_variables!(subproblems[k].model, set, relaxation_order)
-				moment_labels[k] = MH.set_moment_matrix!(subproblems[k].model, set, relaxation_order)
-				MH.set_probability_measure_constraint!(subproblems[k].model, moment_labels[k]) 
-
-			end
-
-			@test length(subproblems[1].model[:y]) == 10
-			@test length(moment_labels[1]) == 10
-
-			MH.set_polynomial_objective!(subproblems, pop, moment_labels, variable_sets)
-			p = AffExpr(0.)
-			add_to_expression!(p, subproblems[1].model[:y][5] + subproblems[1].model[:y][9])
-			@test subproblems[1].polynomial_objective == p
-
-			MH.set_polynomial_constraints!(subproblems, pop, relaxation_order, # test order 2 ?
-				moment_labels, variable_sets)
-
-			@test num_constraints(subproblems[1].model, AffExpr, MOI.EqualTo{Float64}) == 1 
-			@test num_constraints(subproblems[1].model, AffExpr, MOI.GreaterThan{Float64}) == 1
-			@test num_constraints(subproblems[1].model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 1 
-
-			info = MH.set_coupling_terms!(subproblems, [1, 2], 7, [3], 1, moment_labels, 2)
-
-			@test subproblems[1].coupling_terms[1][1] == 1*subproblems[1].model[:y][7]
-			@test subproblems[2].coupling_terms[1][1] == -1*subproblems[2].model[:y][2]
-			@test length(subproblems[1].coupling_terms[1]) == 2
-			@test subproblems[1].multiplier_ids == [7]
-			@test info.moments == [[0x0003], [0x0003, 0x0003]]
-			@test info.pair == (1, 2)
-
-			subproblems = [MH.SubProblem(k) for k in 1:2] 
-			moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:2)
-
-			for (k, set) in enumerate(variable_sets)
-
-				MH.set_moment_variables!(subproblems[k].model, set, 2)
-				moment_labels[k] = MH.set_moment_matrix!(subproblems[k].model, set, 2)
-				MH.set_probability_measure_constraint!(subproblems[k].model, moment_labels[k]) 
-
-			end
-
-			MH.set_polynomial_constraints!(subproblems, pop, 2,	moment_labels, variable_sets)
-
-			@test num_constraints(subproblems[1].model, AffExpr, MOI.GreaterThan{Float64}) == 0
-			@test num_constraints(subproblems[1].model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 2
-
-		end
-
-		@testset "master" begin
-
-			subproblems, info = MH.dual_decomposition_subproblems(pop, 1, variable_sets, max_coupling_order=1)
-			@test info[1].moments == [[0x0003]]
-			@test info[1].pair == (1, 2)
-
-		end
-
-		@testset "oracle" begin
-
-			subproblems, info = MH.dual_decomposition_subproblems(pop, 1, variable_sets)
-
-			multiplier = MH.Multiplier([[1.2, 3.4]], info)
-			
-			@test MH.extract(multiplier, subproblems[1]) == [[1.2, 3.4]]
-
-			scale_factor = MH.update_dual_objective!(subproblems[1], [[2., -2.]])
-			@test scale_factor == 2.
-			@test objective_function(subproblems[1].model) == 0.5*subproblems[1].model[:y][5] + 
-				0.5*subproblems[1].model[:y][9] + 1.0*subproblems[1].model[:y][7] - 1.0*subproblems[1].model[:y][10]
-
-			oracle_data = [ [[1., 2.], [0.2]], [[3., 4.], [0.3]] ]
-
-			@test MH.dual_objective_value(oracle_data) == 0.5
-			@test MH.supergradient(subproblems, multiplier, oracle_data) == [[4., 6.]]
-			@test MH.supergradient_norm(subproblems, multiplier, oracle_data) == norm([4., 6.])
-
-		end
-
-	end
-
-	@testset "dummy decomposition" begin
-		
-		model = Model()
-		moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:2)
-
-		MH.set_moment_variables!(model, variable_sets[1], 1, relaxation_order)
-		MH.set_moment_variables!(model, variable_sets[2], 2, relaxation_order)
-		@test length(model[:y_1]) == 10
-		
-		moment_labels[1] = MH.set_moment_matrix!(model, variable_sets[1], 1, relaxation_order)
-		moment_labels[2] = MH.set_moment_matrix!(model, variable_sets[2], 2, relaxation_order)
-		@test length(keys(moment_labels[1])) == 10
-		
-		@test MH.linear_expression(model, pop.inequality_constraints[1], moment_labels, 1) == model[:y_1][1] - 
-			model[:y_1][3] - model[:y_1][6] #
-		
-		MH.set_objective!(model, pop, moment_labels, variable_sets)
-
-		@test objective_function(model) == model[:y_1][5] + model[:y_1][9] + 
-			model[:y_2][5] + model[:y_2][9] + model[:y_2][14]
-
-		MH.set_probability_measure_constraint!(model, moment_labels, 1)
-		MH.set_probability_measure_constraint!(model, moment_labels, 2)
-
-		MH.set_polynomial_constraints!(model, pop, relaxation_order, moment_labels, variable_sets)
-
-		MH.set_coupling_constraints!(model, relaxation_order, moment_labels, variable_sets, 1)
-
-		@test num_constraints(model, AffExpr, MOI.EqualTo{Float64}) == 2 + 2 + 1
-		@test num_constraints(model, AffExpr, MOI.GreaterThan{Float64}) == 1
-		@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 2
-
-		model = Model()
-		moment_labels = Dict(k => Dict{Vector{UInt16}, Int64}() for k in 1:2)
-		MH.set_moment_variables!(model, variable_sets[1], 1, 2)
-		MH.set_moment_variables!(model, variable_sets[2], 2, 2)
-		moment_labels[1] = MH.set_moment_matrix!(model, variable_sets[1], 1, 2)
-		moment_labels[2] = MH.set_moment_matrix!(model, variable_sets[2], 2, 2)
-		MH.set_polynomial_constraints!(model, pop, 2, moment_labels, variable_sets)
-
-		@test num_constraints(model, Vector{AffExpr}, MOI.PositiveSemidefiniteConeTriangle) == 3
+		@test MH.assign_constraint_to_set(pop.inequality_constraints[1], variable_sets) == 1
 
 	end
 

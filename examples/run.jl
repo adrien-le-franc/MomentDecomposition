@@ -1,12 +1,14 @@
 # julia 1.6
 
 ENV["MOSEKLM_LICENSE_FILE"] = "/home/OPF/mosek/mosek.lic"
-DATA_FOLDER = "/home/OPF/data/pglib-opf/"
+#DATA_FOLDER = "/home/OPF/data/pglib-opf/"
+DATA_FOLDER = "/home/OPF/data/case57_difficult/case57/"
 RESULT_FOLDER = "/home/OPF/MomentHierarchy.jl/x/opf/results"
 max_set_size = 12
 relaxation_order = 2
-case57_rte = false
-case = "pglib_opf_case5_pjm.m"
+case57_rte = true
+#case = "pglib_opf_case5_pjm.m"
+case = "case57_391.m"
 
 
 using MomentHierarchy

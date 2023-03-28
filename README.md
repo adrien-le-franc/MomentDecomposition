@@ -1,6 +1,6 @@
-# MomentHierarchy
+# MomentSOS
 
-This package implements JuMP models for the moment hierarchy in polynomial optimization.
+This package implements JuMP models for the moment-SOS hierarchy in polynomial optimization.
 
 ## TO DO
 

@@ -1,4 +1,4 @@
-module MomentHierarchy
+module MomentSOS
 
 using JuMP
 using DynamicPolynomials

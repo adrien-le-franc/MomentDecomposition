@@ -1,18 +1,18 @@
 # julia 1.6
 
 ENV["MOSEKLM_LICENSE_FILE"] = "/home/OPF/mosek/mosek.lic"
-#DATA_FOLDER = "/home/OPF/data/pglib-opf/"
-DATA_FOLDER = "/home/OPF/data/case57_difficult/case57/"
+DATA_FOLDER = "/home/OPF/data/pglib-opf/"
+#DATA_FOLDER = "/home/OPF/data/case57_difficult/case57/"
 RESULT_FOLDER = "/home/OPF/MomentHierarchy.jl/x/opf/results"
 max_set_size = 12
 relaxation_order = 2
-case57_rte = true
-#case = "pglib_opf_case5_pjm.m"
-case = "case57_391.m"
+case57_rte = false
+case = "pglib_opf_case5_pjm.m"
+#case = "case57_391.m"
 
 
-using MomentHierarchy
-MH = MomentHierarchy
+using MomentSOS
+MSOS = MomentSOS
 
 using MosekTools
 using Ipopt
@@ -38,12 +38,12 @@ else
 	objective = normalize_polynomial(pop.objective)
 	inequalities = [normalize_polynomial(g) for g in pop.inequality_constraints]
 	equalities = [normalize_polynomial(g) for g in pop.equality_constraints]
-	pop = MH.POP(objective, pop.n_variables, inequalities, equalities)
+	pop = MSOS.POP(objective, pop.n_variables, inequalities, equalities)
 end
 
 # NLP
 
-model = MH.non_linear_model(pop)
+model = MSOS.non_linear_model(pop)
 set_optimizer(model, Ipopt.Optimizer)
 set_start_value.(model[:x], x0)
 optimize!(model)
@@ -55,7 +55,7 @@ nlp = Dict("primal_status" => primal_status(model),
 
 # Relaxation 
 
-t_build = @elapsed model = MH.sos_relaxation_model(pop, relaxation_order, minimal_sets)
+t_build = @elapsed model = MSOS.sos_relaxation_model(pop, relaxation_order, minimal_sets)
 
 set_optimizer(model, Mosek.Optimizer)
 optimize!(model)

@@ -6,8 +6,8 @@
 # adapted from the TSSOS package https://github.com/wangjie212/TSSOS
 
 using PowerModels
-using MomentHierarchy
-MH = MomentHierarchy
+using MomentSOS
+MSOS = MomentSOS
 
 
 function normalize_coeff(coe)
@@ -277,10 +277,10 @@ function parse_opf_linear_costs_to_pop(data::Dict{String, Any}; normal=true)
         max_coefficient = nothing
     end
 
-    objective = MH.SparsePolynomial(supp[1], coe[1]) 
-    inequality_constraints = [MH.SparsePolynomial(supp[i], coe[i]) for i in 2:m-numeq+1]
-    equality_constraints = [MH.SparsePolynomial(supp[i], coe[i]) for i in m-numeq+2:m+1]
+    objective = MSOS.SparsePolynomial(supp[1], coe[1]) 
+    inequality_constraints = [MSOS.SparsePolynomial(supp[i], coe[i]) for i in 2:m-numeq+1]
+    equality_constraints = [MSOS.SparsePolynomial(supp[i], coe[i]) for i in m-numeq+2:m+1]
 
-    return MH.POP(objective, n, inequality_constraints, equality_constraints), startpoint, sets, max_coefficient
+    return MSOS.POP(objective, n, inequality_constraints, equality_constraints), startpoint, sets, max_coefficient
 
 end

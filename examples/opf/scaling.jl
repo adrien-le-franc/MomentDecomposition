@@ -1,7 +1,7 @@
 # julia 1.6
 
-using MomentHierarchy
-MH = MomentHierarchy
+using MomentSOS
+MSOS = MomentSOS
 
 using Combinatorics
 
@@ -29,15 +29,15 @@ function dict_to_polynomial(dict::Dict{Vector{UInt16}, Float64})
 
 	end
 
-	return MH.SparsePolynomial(support, coefficient)
+	return MSOS.SparsePolynomial(support, coefficient)
 
 end
 
-function scale_polynomial(polynomial::MH.SparsePolynomial, bounds::Dict{UInt16, Vector{Float64}}, normalize::Bool=false)
+function scale_polynomial(polynomial::MSOS.SparsePolynomial, bounds::Dict{UInt16, Vector{Float64}}, normalize::Bool=false)
 
 	p = Dict{Vector{UInt16}, Float64}()
 
-	for (support, coefficient) in MH.terms(polynomial)
+	for (support, coefficient) in MSOS.terms(polynomial)
 
 		variables = unique(support)
 
@@ -87,7 +87,7 @@ function scale_polynomial(polynomial::MH.SparsePolynomial, bounds::Dict{UInt16, 
 
 		end
 
-		return max_coefficient, MH.SparsePolynomial(support, coefficient)
+		return max_coefficient, MSOS.SparsePolynomial(support, coefficient)
 	
 	else
 		
@@ -97,7 +97,7 @@ function scale_polynomial(polynomial::MH.SparsePolynomial, bounds::Dict{UInt16, 
 
 end
 
-function normalize_polynomial(p::MH.SparsePolynomial)
+function normalize_polynomial(p::MSOS.SparsePolynomial)
 
 	max_coefficient = maximum(abs.(p.coefficients))
 	
@@ -105,7 +105,7 @@ function normalize_polynomial(p::MH.SparsePolynomial)
 	coefficient = Float64[]
 	new_c = 0.
 
-	for (s, c) in MH.terms(p)
+	for (s, c) in MSOS.terms(p)
 
 		new_c = c / max_coefficient
 
@@ -116,7 +116,7 @@ function normalize_polynomial(p::MH.SparsePolynomial)
 
 	end
 
-	return MH.SparsePolynomial(support, coefficient)
+	return MSOS.SparsePolynomial(support, coefficient)
 
 end
 

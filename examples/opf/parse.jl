@@ -4,8 +4,8 @@
 # adapted from the TSSOS package https://github.com/wangjie212/TSSOS
 
 using PowerModels
-using MomentHierarchy
-MH = MomentHierarchy
+using MomentSOS
+MSOS = MomentSOS
 
 
 function move_zero!(supp,coe)
@@ -571,14 +571,14 @@ function parse_opf_to_pop(data::Dict{String, Any}; AngleCons=false,
 
     ####### assembling the model #########
 
-    objective = MH.SparsePolynomial(supp[1], coe[1]) 
-    inequality_constraints = [MH.SparsePolynomial(supp[i], coe[i]) for i in 2:m-numeq+1]
-    equality_constraints = [MH.SparsePolynomial(supp[i], coe[i]) for i in m-numeq+2:m+1]
+    objective = MSOS.SparsePolynomial(supp[1], coe[1]) 
+    inequality_constraints = [MSOS.SparsePolynomial(supp[i], coe[i]) for i in 2:m-numeq+1]
+    equality_constraints = [MSOS.SparsePolynomial(supp[i], coe[i]) for i in m-numeq+2:m+1]
 
     # add new eq
     for i in 1:new_cons
         new_supp[i], new_coe[i] = move_zero!(new_supp[i], new_coe[i])
-        push!(equality_constraints, MH.SparsePolynomial(new_supp[i], new_coe[i]))
+        push!(equality_constraints, MSOS.SparsePolynomial(new_supp[i], new_coe[i]))
     end
 
     # add new ineq
@@ -587,7 +587,7 @@ function parse_opf_to_pop(data::Dict{String, Any}; AngleCons=false,
         var = n + new_vars
         coefficients = [-bounds[var][1]*bounds[var][2];bounds[var][1]+bounds[var][2];-1] 
         support = [[], [var], [var;var]]
-        push!(inequality_constraints, MH.SparsePolynomial(support, coefficients)) 
+        push!(inequality_constraints, MSOS.SparsePolynomial(support, coefficients)) 
     end
     """
     
@@ -620,6 +620,6 @@ function parse_opf_to_pop(data::Dict{String, Any}; AngleCons=false,
 
     startpoint = vcat(startpoint, new_x)
  
-    return MH.POP(objective, n, inequality_constraints, equality_constraints), startpoint, sets, bounds
+    return MSOS.POP(objective, n, inequality_constraints, equality_constraints), startpoint, sets, bounds
 
 end

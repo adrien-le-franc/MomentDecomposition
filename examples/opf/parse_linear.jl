@@ -92,6 +92,8 @@ function parse_opf_linear_costs_to_pop(data::Dict{String, Any}; normal=true)
     bus=collect(keys(ref[:bus]))
     sort!(bus)
 
+    bounds = Dict{UInt16, Vector{Float64}}()
+
     # voltage magnitude constraints
     for i=1:nbus
         supp[k]=[[], [i;i], [i+nbus;i+nbus]]
@@ -100,6 +102,8 @@ function parse_opf_linear_costs_to_pop(data::Dict{String, Any}; normal=true)
         coe[k+1]=[ref[:bus][bus[i]]["vmax"]^2;-1;-1]
         startpoint[i]=sqrt(ref[:bus][bus[i]]["vmin"]*ref[:bus][bus[i]]["vmax"]/2)
         startpoint[i+nbus]=sqrt(ref[:bus][bus[i]]["vmin"]*ref[:bus][bus[i]]["vmax"]/2)
+        bounds[convert(UInt16, i)] = [ref[:bus][bus[i]]["vmax"], -ref[:bus][bus[i]]["vmax"]]
+        bounds[convert(UInt16, i+nbus)] = [ref[:bus][bus[i]]["vmax"], -ref[:bus][bus[i]]["vmax"]]
         k+=2
     end
 
@@ -270,17 +274,19 @@ function parse_opf_linear_costs_to_pop(data::Dict{String, Any}; normal=true)
 
     ####### assembling the model #########
 
+    """
     if normal == true
         max_coefficient = maximum(abs.(coe[1]))
         coe[1] = coe[1] ./ max_coefficient
     else
         max_coefficient = nothing
     end
-
+    """
+    
     objective = MSOS.SparsePolynomial(supp[1], coe[1]) 
     inequality_constraints = [MSOS.SparsePolynomial(supp[i], coe[i]) for i in 2:m-numeq+1]
     equality_constraints = [MSOS.SparsePolynomial(supp[i], coe[i]) for i in m-numeq+2:m+1]
 
-    return MSOS.POP(objective, n, inequality_constraints, equality_constraints), startpoint, sets, max_coefficient
+    return MSOS.POP(objective, n, inequality_constraints, equality_constraints), startpoint, sets, bounds
 
 end

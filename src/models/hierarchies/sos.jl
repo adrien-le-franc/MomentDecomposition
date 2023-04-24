@@ -153,7 +153,7 @@ function set_SOS_constraints!(model, pop, monomial_index)
 end
 
 function sos_relaxation_model(pop::POP, relaxation_order::Int64, 
-	sparsity_sets::Vector{Vector{T}}=dense_relaxation_set(pop)) where T <: Integer
+	sparsity_sets::Vector{Vector{T}}=dense_relaxation_set(pop), return_monomials=false) where T <: Integer
 
 	model = Model()
 
@@ -165,6 +165,10 @@ function sos_relaxation_model(pop::POP, relaxation_order::Int64,
 
 	@objective(model, Max, t)
 
-	return model
+	if return_monomials
+		return model, monomial_index
+	else
+		return model
+	end
 
 end

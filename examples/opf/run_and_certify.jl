@@ -6,7 +6,7 @@ DATA_FOLDER = "/home/OPF/data/case57_difficult/case57/"
 RESULT_FOLDER = "/home/OPF/MomentHierarchy.jl/x/opf/results"
 max_set_size = 12
 relaxation_order = 2
-case57_rte = false
+case57_rte = true
 #case = "pglib_opf_case5_pjm.m"
 case = "case57_391.m"
 
@@ -21,6 +21,7 @@ using JuMP
 using FileIO
 using Dates
 
+include("certify.jl")
 include("scaling.jl")
 include("parse.jl")
 include("parse_linear.jl")
@@ -30,16 +31,15 @@ include("parse_linear.jl")
 data = parse_file(joinpath(DATA_FOLDER, case))
 
 if case57_rte
-	pop, x0, minimal_sets, objective_scaling = parse_opf_linear_costs_to_pop(data)
+	pop, x0, minimal_sets, bounds = parse_opf_linear_costs_to_pop(data)
 else
 	pop, x0, minimal_sets, bounds = parse_opf_to_pop(data, AngleCons=true, LineLimit=true, nlp=true, n_max=max_set_size)
-
-	objective_scaling = maximum(abs.(pop.objective.coefficients))
-	objective = normalize_polynomial(pop.objective)
-	inequalities = [normalize_polynomial(g) for g in pop.inequality_constraints]
-	equalities = [normalize_polynomial(g) for g in pop.equality_constraints]
-	pop = MSOS.POP(objective, pop.n_variables, inequalities, equalities)
 end
+
+objective_scaling, objective = scale_polynomial(pop.objective, bounds, true)
+inequalities = [scale_polynomial(g, bounds, true)[2] for g in pop.inequality_constraints]
+equalities = [scale_polynomial(g, bounds, true)[2] for g in pop.equality_constraints]
+pop = MSOS.POP(objective, pop.n_variables, inequalities, equalities)
 
 # NLP
 
@@ -55,17 +55,23 @@ nlp = Dict("primal_status" => primal_status(model),
 
 # Relaxation 
 
-t_build = @elapsed model = MSOS.sos_relaxation_model(pop, relaxation_order, minimal_sets)
+t_build = @elapsed model, monomial_index = MSOS.sos_relaxation_model(pop, relaxation_order, minimal_sets, true)
 
 set_optimizer(model, Mosek.Optimizer)
 optimize!(model)
 t_solve = solve_time(model)
 
+t_error = @elapsed err = compute_error(model, pop, monomial_index)
+lower_epsilon = sum([e <= 0. ? e : 0. for e in err])
+certified_bound = (objective_value(model) + lower_epsilon)*objective_scaling
+
+
 relaxation = Dict("t_build" => t_build, "t_solve" => t_solve,
 				  "primal_status" => primal_status(model),
 				  "dual_status" => dual_status(model),
 				  "termination_status" => termination_status(model),
-				  "lower_bound" => objective_value(model)*objective_scaling)
+				  "lower_bound" => objective_value(model)*objective_scaling,
+				  "certified_bound" => certified_bound)
 
 # Results
 

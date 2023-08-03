@@ -43,86 +43,94 @@ function set_X_j!(model, pop, monomial_index, sets, relaxation_order)
 
 	# inequality constraints
 
-	X_ineq = Vector{Union{VariableRef, Symmetric{VariableRef, Matrix{VariableRef}}}}(undef, length(pop.inequality_constraints))
+	if pop.inequality_constraints != nothing
 
-	for (l, polynomial) in enumerate(pop.inequality_constraints)
+		X_ineq = Vector{Union{VariableRef, Symmetric{VariableRef, Matrix{VariableRef}}}}(undef, length(pop.inequality_constraints))
 
-		localizing_order = localizing_matrix_order(polynomial, relaxation_order)
-		k = assign_constraint_to_set(polynomial, sets)
-		set = sets[k]
+		for (l, polynomial) in enumerate(pop.inequality_constraints)
 
-		if localizing_order == 0
+			localizing_order = localizing_matrix_order(polynomial, relaxation_order)
+			k = assign_constraint_to_set(polynomial, sets)
+			set = sets[k]
 
-			X_ineq[l] =  @variable(model)
-			@constraint(model, X_ineq[l] >= 0.)
+			if localizing_order == 0
 
-			for (support, coefficient) in terms(polynomial)
-				add_to_expression!(model[:linear_operator][monomial_index[support]], coefficient, X_ineq[l])
-			end
+				X_ineq[l] =  @variable(model)
+				@constraint(model, X_ineq[l] >= 0.)
 
-		else
-
-			matrix_size = n_moments(set, localizing_order)
-			X_ineq[l] = @variable(model, [1:matrix_size, 1:matrix_size], PSD)
-
-			for (j, alpha) in moment_columns(set, localizing_order)
-				for (i, beta) in moment_rows(set, localizing_order, j)
-
-					monomials = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support] 
-
-					for (n, monomial) in enumerate(monomials)
-						add_to_expression!(model[:linear_operator][monomial_index[monomial]], (2 - (i==j))*polynomial.coefficients[n], X_ineq[l][i, j])
-					end
-					
+				for (support, coefficient) in terms(polynomial)
+					add_to_expression!(model[:linear_operator][monomial_index[support]], coefficient, X_ineq[l])
 				end
+
+			else
+
+				matrix_size = n_moments(set, localizing_order)
+				X_ineq[l] = @variable(model, [1:matrix_size, 1:matrix_size], PSD)
+
+				for (j, alpha) in moment_columns(set, localizing_order)
+					for (i, beta) in moment_rows(set, localizing_order, j)
+
+						monomials = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support] 
+
+						for (n, monomial) in enumerate(monomials)
+							add_to_expression!(model[:linear_operator][monomial_index[monomial]], (2 - (i==j))*polynomial.coefficients[n], X_ineq[l][i, j])
+						end
+						
+					end
+				end
+
 			end
 
 		end
 
+		model[:X_ineq] = X_ineq
+		
 	end
-
-	model[:X_ineq] = X_ineq
 
 	# equality constraints
 
-	X_eq = Vector{Union{VariableRef, Symmetric{VariableRef, Matrix{VariableRef}}}}(undef, length(pop.equality_constraints))
+	if pop.equality_constraints != nothing
 
-	for (l, polynomial) in enumerate(pop.equality_constraints)
+		X_eq = Vector{Union{VariableRef, Symmetric{VariableRef, Matrix{VariableRef}}}}(undef, length(pop.equality_constraints))
 
-		localizing_order = localizing_matrix_order(polynomial, relaxation_order)
-		k = assign_constraint_to_set(polynomial, sets)
-		set = sets[k]
+		for (l, polynomial) in enumerate(pop.equality_constraints)
 
-		if localizing_order == 0
+			localizing_order = localizing_matrix_order(polynomial, relaxation_order)
+			k = assign_constraint_to_set(polynomial, sets)
+			set = sets[k]
 
-			X_eq[l] = @variable(model)
+			if localizing_order == 0
 
-			for (support, coefficient) in terms(polynomial)
-				add_to_expression!(model[:linear_operator][monomial_index[support]], coefficient, X_eq[l])	
-			end
+				X_eq[l] = @variable(model)
 
-		else
-
-			matrix_size = n_moments(set, localizing_order)
-			X_eq[l] = @variable(model, [1:matrix_size, 1:matrix_size], Symmetric)
-
-			for (j, alpha) in moment_columns(set, localizing_order)
-				for (i, beta) in moment_rows(set, localizing_order, j)
-
-					monomials = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support] 
-
-					for (n, monomial) in enumerate(monomials)
-						add_to_expression!(model[:linear_operator][monomial_index[monomial]], (2 - (i==j))*polynomial.coefficients[n], X_eq[l][i, j])
-					end
-					
+				for (support, coefficient) in terms(polynomial)
+					add_to_expression!(model[:linear_operator][monomial_index[support]], coefficient, X_eq[l])	
 				end
+
+			else
+
+				matrix_size = n_moments(set, localizing_order)
+				X_eq[l] = @variable(model, [1:matrix_size, 1:matrix_size], Symmetric)
+
+				for (j, alpha) in moment_columns(set, localizing_order)
+					for (i, beta) in moment_rows(set, localizing_order, j)
+
+						monomials = [monomial_product(alpha, beta, gamma) for gamma in polynomial.support] 
+
+						for (n, monomial) in enumerate(monomials)
+							add_to_expression!(model[:linear_operator][monomial_index[monomial]], (2 - (i==j))*polynomial.coefficients[n], X_eq[l][i, j])
+						end
+						
+					end
+				end
+
 			end
 
 		end
 
-	end
+		model[:X_eq] = X_eq
 
-	model[:X_eq] = X_eq
+	end
 
 	return nothing
 

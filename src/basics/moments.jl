@@ -33,6 +33,10 @@ function moment_columns(pop::POP, max_order::Int64)
 	return moment_columns(collect(0x0001:convert(UInt16, pop.n_variables)), max_order)
 end
 
+function moment_columns(block::Vector{T}, variables::Vector{T}, max_order::Int64) where T<:Integer
+	return Iterators.filter(x->x[1] in block, moment_columns(variables, max_order))
+end
+
 # rows of moment/localization matrix
 
 function moment_rows(variables::Vector{UInt16}, max_order::Int64, column::Int64)
@@ -45,6 +49,10 @@ end
 
 function moment_rows(pop::POP, max_order::Int64, column::Int64)
 	return moment_rows(collect(0x0001:convert(UInt16, pop.n_variables)), max_order, column)
+end
+
+function moment_rows(block::Vector{T}, variables::Vector{T}, max_order::Int64, column::Int64) where T<:Integer
+	return first(moment_columns(block, variables, max_order), column)
 end
 
 # moments for coupling constraints
@@ -66,4 +74,10 @@ end
 function monomial_product(alpha::Vector{UInt16}, beta::Vector{UInt16}, 
 	gamma::Vector{UInt16}=UInt16[])
 	return monomial(vcat(alpha, beta, gamma))
+end
+
+function degrees(alpha::Vector{UInt16})
+	if isempty(alpha) return [0]
+	else return [sum(alpha .== x) for x in unique(alpha)]
+	end
 end

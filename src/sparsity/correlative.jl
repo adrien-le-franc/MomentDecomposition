@@ -50,7 +50,7 @@ function build_csp_graph(pop::POP)
 
 end
 
-function compute_cliques(pop::POP)
+function compute_csp_cliques(pop::POP)
 	
 	csp_graph = build_csp_graph(pop)
 	cliques, num_cliques, size_cliques = chordal_cliques!(csp_graph, method="MF", minimize=true)

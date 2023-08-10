@@ -65,6 +65,8 @@ using LinearAlgebra
 		@test MSOS.monomial([0x0002, 0x0000, 0x0001]) == [0x0001, 0x0002]
 		@test MSOS.monomial_product([0x0001], [0x0001, 0x0000]) == [0x0001, 0x0001]
 		@test MSOS.monomial_product([0x0001], [0x0001, 0x0000], [0x0000]) == [0x0001, 0x0001]
+		@test MSOS.degrees(UInt16[]) == [0]
+		@test MSOS.degrees([0x0002, 0x0001, 0x0001]) == [1, 2]
 
 	end
 
@@ -132,13 +134,30 @@ end
 
 	end	
 
-	variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
+	@testset "nlp" begin
+		
+		model = MSOS.non_linear_model(pop)
+		@test num_constraints(model; count_variable_in_set_constraints=false) == 3
+		
+	end
+
+end
+
+@testset "sparsity" begin
+
+	@polyvar x[1:6]
+	f = x[1]*x[2] + x[2]*x[3] + x[3]*x[4] + x[4]*x[5] + x[5]*x[6]
+	g_1 = 1 - x[1]^2 - x[2]^2 
+	g_2 = 1 - x[3]^2 - x[4]^2  
+	g_3 = 1 - x[5]^2 - x[6]^2 
+	pop = MSOS.POP(f, x, g_inequality=g_1, g_equality=[g_2, g_3])
 	
-	@testset "sparsity" begin
+	variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
+	relaxation_order = 1
+	
+	@testset "correlative" begin
 
 		model = Model()
-		variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
-
 		moment_labels = MSOS.set_moment_matrices!(model, pop, relaxation_order, variable_sets)
 		
 		@test length(keys(moment_labels)) == 22
@@ -148,11 +167,32 @@ end
 
 	end
 
-	@testset "nlp" begin
+	@testset "term" begin
+
+		monomials = [vcat(pop.objective.support[1:2], pop.inequality_constraints[1].support),
+					 vcat(pop.objective.support[3:5], pop.equality_constraints[1].support, pop.equality_constraints[2].support)]
 		
-		model = MSOS.non_linear_model(pop)
-		@test num_constraints(model; count_variable_in_set_constraints=false) == 3
-		
+		sparsity_pattern = MSOS.SparsityPattern(variable_sets, monomials, false)
+
+		@test sparsity_pattern.monomial_sets[1] == [[0x0001, 0x0002], [0x0002, 0x0003], [0x0001, 0x0001], [0x0002, 0x0002], UInt16[]]
+
+		pop = MSOS.POP(x[1] + x[1]^2, x, g_inequality=[x[1] + x[2]^2 + x[2]*x[3] + x[2]*x[4]])	
+		sparsity_pattern = MSOS.SparsityPattern([[1, 2, 3, 4]], [vcat(pop.objective.support, pop.inequality_constraints[1].support)], false)
+
+		blocks = MSOS.compute_tsp_blocks_X_0(sparsity_pattern, 1, 1)
+
+		@test blocks == [[1, 2], [3, 4, 5]]
+
+		blocks = MSOS.compute_tsp_blocks_X_0(sparsity_pattern, 1, 2)
+
+		@test blocks == [[1, 2, 6, 10, 11, 12, 13, 15], [3, 4, 5], [7], [8], [9], [14]]
+
+		@test [MSOS.monomial(alpha) for (j, alpha) in MSOS.moment_columns(blocks[2], [1, 2, 3, 4], 2)] == [[0x0002], [0x0003], [0x0004]]
+		@test [MSOS.monomial(alpha) for (j, alpha) in MSOS.moment_rows(blocks[2], [1, 2, 3, 4], 2, 2)] == [[0x0002], [0x0003]]
+
+
+
+
 	end
 
 end

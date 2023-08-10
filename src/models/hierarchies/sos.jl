@@ -4,12 +4,76 @@
 function set_X_0!(model, sets, relaxation_order)
 
 	monomial_index = Dict{Vector{UInt16}, Int64}()
-	X_0 = Vector{Symmetric{VariableRef, Matrix{VariableRef}}}(undef, length(sets))
+	X_0 = Vector{Vector{Symmetric{VariableRef, Matrix{VariableRef}}}}(undef, length(sets))
+	x_0 = Vector{Vector{VariableRef}}(undef, length(sets))
 	linear_operator = Vector{AffExpr}()
 	
 	count = 0
 
 	for (k, set) in enumerate(sets)
+
+		# changes !!
+
+		blocks = compute_tsp_blocks(pop, relaxation_order, sparsity_pattern, k)
+		
+		n_scalar = sum(blocks[length.(blocks) .== 1])
+		x_0_k =	Vector{VariableRef}(undef, n_scalar)
+
+
+		for (l, alpha) in moment_columns(block, set, relaxation_order)
+
+			
+
+		end
+
+
+
+		for (l, block) in scalar(blocks)
+
+			x_0_k[l] =  @variable(model)
+			@constraint(model, x_0_k[l] >= 0.)
+
+
+			monomial = moment_columns(block, set, relaxation_order)
+
+		end
+
+
+
+		for (l, block) in matrix(blocks)
+
+			x_0_k[l] =  @variable(model)
+			@constraint(model, x_0_k[l] >= 0.)
+
+
+			monomial = moment_columns(block, set, relaxation_order)
+
+		end
+
+
+
+
+
+		n_matrix = length(blocks) - n_scalar
+		X_0_k = Vector{Symmetric{VariableRef, Matrix{VariableRef}}}(undef, n_matrix)
+		
+
+		for block in blocks
+
+			if length(block) == 1
+
+
+
+			else
+
+				matrix_size = n_moments(block, relaxation_order)
+				X_0[k] = @variable(model, [1:matrix_size, 1:matrix_size], PSD)				
+
+			end
+
+
+
+		end
 
 		matrix_size = n_moments(set, relaxation_order)
 		X_0[k] = @variable(model, [1:matrix_size, 1:matrix_size], PSD)

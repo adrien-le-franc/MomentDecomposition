@@ -3,17 +3,17 @@
 # tools for term sparsity
 
 
-function compute_tsp_blocks_X_0(sparsity_pattern::SparsityPattern, k::Int64, relaxation_order::Int64)
+function compute_tsp_blocks_X_0(variable_set, monomial_set, relaxation_order::Int64)
 
-	basis_size = n_moments(sparsity_pattern.variable_sets[k], relaxation_order)
+	basis_size = n_moments(variable_set, relaxation_order)
 	tsp_graph = SimpleGraph(basis_size)
 
-	for (j, alpha) in moment_columns(sparsity_pattern.variable_sets[k], relaxation_order)
-		for (i, beta) in moment_rows(sparsity_pattern.variable_sets[k], relaxation_order, j)
+	for (j, alpha) in moment_columns(variable_set, relaxation_order)
+		for (i, beta) in moment_rows(variable_set, relaxation_order, j)
 
 			monomial = monomial_product(alpha, beta)
 
-			if monomial in sparsity_pattern.monomial_sets[k] || all(iseven.(degrees(monomial)))
+			if monomial in monomial_set || all(iseven.(degrees(monomial)))
 				if i != j
 					add_edge!(tsp_graph, i, j)
 				end
@@ -26,10 +26,10 @@ function compute_tsp_blocks_X_0(sparsity_pattern::SparsityPattern, k::Int64, rel
 
 end
 
-function scalar(blocks) 
-	return enumerate(@view(blocks[length.(blocks) .== 1]))	
+function diagonal_block(blocks)
+	return Vector{Int64}(@view(blocks[length.(blocks) .== 1]))
 end
 
-function matrix(blocks)
+function matrix_blocks(blocks)
 	return enumerate(@view(blocks[length.(blocks) .> 1]))
 end

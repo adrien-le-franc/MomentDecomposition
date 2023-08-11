@@ -187,8 +187,8 @@ end
 
 		@test blocks == [[1, 2, 6, 10, 11, 12, 13, 15], [3, 4, 5], [7], [8], [9], [14]]
 
-		@test [MSOS.monomial(alpha) for (j, alpha) in MSOS.moment_columns(blocks[2], [1, 2, 3, 4], 2)] == [[0x0002], [0x0003], [0x0004]]
-		@test [MSOS.monomial(alpha) for (j, alpha) in MSOS.moment_rows(blocks[2], [1, 2, 3, 4], 2, 2)] == [[0x0002], [0x0003]]
+		@test [MSOS.monomial(alpha[2]) for (j, alpha) in MSOS.moment_columns(blocks[2], [1, 2, 3, 4], 2)] == [[0x0002], [0x0003], [0x0004]]
+		@test [MSOS.monomial(alpha[2]) for (j, alpha) in MSOS.moment_rows(blocks[2], [1, 2, 3, 4], 2, 2)] == [[0x0002], [0x0003]]
 
 
 

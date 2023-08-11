@@ -21,6 +21,8 @@ end
 
 # columns of moment/localization matrix
 
+
+
 function moment_columns(variables::Vector{UInt16}, max_order::Int64)
 	return enumerate(with_replacement_combinations(vcat([0x0000], variables), max_order))
 end
@@ -30,12 +32,14 @@ function moment_columns(variables::Vector{Int64}, max_order::Int64)
 end
 
 function moment_columns(pop::POP, max_order::Int64)
-	return moment_columns(collect(0x0001:convert(UInt16, pop.n_variables)), max_order)
+	return moment_columns(collect(0x0001:convert(UInt16, pop.n_variables)), max_order) # old ?
 end
 
-function moment_columns(block::Vector{T}, variables::Vector{T}, max_order::Int64) where T<:Integer
-	return Iterators.filter(x->x[1] in block, moment_columns(variables, max_order))
+function moment_columns(block::Vector{Int64}, variables::Vector{T}, max_order::Int64) where T<:Integer
+	return enumerate(Iterators.filter(x->x[1] in block, moment_columns(variables, max_order)))
 end
+
+
 
 # rows of moment/localization matrix
 
@@ -51,7 +55,7 @@ function moment_rows(pop::POP, max_order::Int64, column::Int64)
 	return moment_rows(collect(0x0001:convert(UInt16, pop.n_variables)), max_order, column)
 end
 
-function moment_rows(block::Vector{T}, variables::Vector{T}, max_order::Int64, column::Int64) where T<:Integer
+function moment_rows(block::Vector{Int64}, variables::Vector{T}, max_order::Int64, column::Int64) where T<:Integer
 	return first(moment_columns(block, variables, max_order), column)
 end
 
@@ -67,13 +71,13 @@ end
 
 # monomials 
 
-function monomial(alpha::Vector{UInt16})
+function clear_zeros(alpha::Vector{UInt16})
 	return sort!(alpha[alpha .!= 0x0000])
 end
 
 function monomial_product(alpha::Vector{UInt16}, beta::Vector{UInt16}, 
 	gamma::Vector{UInt16}=UInt16[])
-	return monomial(vcat(alpha, beta, gamma))
+	return clear_zeros(vcat(alpha, beta, gamma))
 end
 
 function degrees(alpha::Vector{UInt16})

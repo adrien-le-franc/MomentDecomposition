@@ -88,8 +88,11 @@ function set_X_j!(model, pop, monomial_index, sets, relaxation_order)
 		for (l, polynomial) in enumerate(pop.inequality_constraints)
 
 			localizing_order = localizing_matrix_order(polynomial, relaxation_order)
-			k = assign_constraint_to_set(polynomial, sets)
-			set = sets[k]
+			
+			#k = assign_constraint_to_set(polynomial, sets)
+			#set = sets[k]
+
+			set = unique(vcat(polynomial.support...))
 
 			if localizing_order == 0
 
@@ -150,8 +153,11 @@ function set_X_j!(model, pop, monomial_index, sets, relaxation_order)
 		for (l, polynomial) in enumerate(pop.equality_constraints)
 
 			localizing_order = localizing_matrix_order(polynomial, relaxation_order)
-			k = assign_constraint_to_set(polynomial, sets)
-			set = sets[k]
+			
+			#k = assign_constraint_to_set(polynomial, sets)
+			#set = sets[k]
+
+			set = unique(vcat(polynomial.support...))
 
 			if localizing_order == 0
 

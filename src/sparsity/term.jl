@@ -27,7 +27,7 @@ function compute_tsp_blocks_X_0(variable_set, monomial_set, relaxation_order::In
 end
 
 function diagonal_block(blocks)
-	return Vector{Int64}(@view(blocks[length.(blocks) .== 1]))
+	return Vector{Int64}(vcat(@view(blocks[length.(blocks) .== 1])...))
 end
 
 function matrix_blocks(blocks)

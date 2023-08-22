@@ -212,7 +212,7 @@ function set_X_j!(model, pop, monomial_index, sets, relaxation_order)
 
 end
 
-function set_SOS_constraints!(model, pop, monomial_index)
+function set_SOS_constraints!(model, pop, monomial_index, loose_moment_scaling)
 
 	objective_coefficients = Dict{Int64, Float64}()
 
@@ -224,12 +224,25 @@ function set_SOS_constraints!(model, pop, monomial_index)
 
 	set_variable_to_zero = AffExpr[]
 
+	z_lb = VariableRef[]
+	z_ub = VariableRef[]	
+
 	for (i, expression) in enumerate(model[:linear_operator])
+
+		if length(expression.terms) == 1 && loose_moment_scaling
+			push!(set_variable_to_zero, first(expression.terms)[1])
+			continue
+		elseif i > 1
+			push!(z_lb, @variable(model))
+			push!(z_ub, @variable(model))
+			@constraint(model, z_lb[end] >= 0.)
+			@constraint(model, z_ub[end] >= 0.)
+			add_to_expression!(expression, z_lb[end])
+			add_to_expression!(expression, -1., z_ub[end])
+		end
 
 		if i in keys(objective_coefficients)
 			@constraint(model, expression == objective_coefficients[i])
-		elseif length(expression.terms) == 1
-			push!(set_variable_to_zero, first(expression.terms)[1])
 		else
 			@constraint(model, expression == 0.)
 		end
@@ -239,6 +252,9 @@ function set_SOS_constraints!(model, pop, monomial_index)
 	for variable in unique(set_variable_to_zero)
 		@constraint(model, variable == 0.)
 	end
+	
+	model[:z_lb] = z_lb
+	model[:z_ub] = z_ub
 
 	return nothing
 
@@ -247,8 +263,9 @@ end
 function sos_relaxation_model(pop::POP, relaxation_order::Int64, 
 	variable_sets::Vector{Vector{T}},  
 	# =dense_relaxation_set(pop),
-	monomial_sets::Vector{Vector{Vector{UInt16}}},
-	minimal_multipliers=false,
+	monomial_sets::Vector{Vector{Vector{UInt16}}};
+	minimal_multipliers=true,
+	loose_moment_scaling=false,
 	return_monomials=false) where T <: Integer
 
 	model = Model()
@@ -257,9 +274,11 @@ function sos_relaxation_model(pop::POP, relaxation_order::Int64,
 
 	monomial_index = set_X_0!(model, variable_sets, monomial_sets, relaxation_order)
 	set_X_j!(model, pop, monomial_index, variable_sets, relaxation_order)
-	set_SOS_constraints!(model, pop, monomial_index)
+	set_SOS_constraints!(model, pop, monomial_index, loose_moment_scaling)
 
-	@objective(model, Max, t)
+	#@objective(model, Max, t)
+	@objective(model, Max, t - sum(model[:z_ub][1:end] .+ model[:z_lb][1:end]))
+
 
 	if return_monomials
 		return model, monomial_index

@@ -24,7 +24,7 @@ function set_moment_matrices!(model::Model, pop::POP, relaxation_order::Int64,
 				if !(label in keys(moment_labels))
 
 					count += 1
-					push!(y, @variable(model, base_name="y_$(count)")) # base_name can be costly for large models: remove ?
+					push!(y, @variable(model)) #, base_name="y_$(count)")) # base_name can be costly for large models: remove ?
 					moment_labels[label] = count
 				
 				end

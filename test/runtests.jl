@@ -132,12 +132,57 @@ end
 
 	end	
 
-	variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
-	
-	@testset "sparsity" begin
+	@testset "nlp" begin
+		
+		model = MSOS.non_linear_model(pop)
+		@test num_constraints(model; count_variable_in_set_constraints=false) == 3
+
+	end
+
+	@testset "certification" begin
+
+		X = Symmetric([1 0 0; 0 1 0; 0 0 -2.0])
+		@test MSOS.project_to_PSD_cone(X) == Symmetric([1 0 0; 0 1 0; 0 0 0.0])
+
+		@polyvar x[1:2]
+		f = x[1] + 0.
+		g_1 = 1 - x[1]^2 - x[2]^2 
+		pop = MSOS.POP(f, x, g_equality=g_1)
+		model = MSOS.sos_relaxation_model(pop, 1)
+
+		values = Dict{VariableRef, Float64}()
+
+		values[model[:t]] = -1.0
+
+		values[model[:X_0][1][1, 1]] = 1.0
+		values[model[:X_0][1][1, 2]] = 0.5
+		values[model[:X_0][1][1, 3]] = 0.
+		values[model[:X_0][1][2, 2]] = 0.
+		values[model[:X_0][1][2, 3]] = 1.0e-6
+		values[model[:X_0][1][3, 3]] = 0.
+
+		values[model[:X_eq][1]] = 0.
+
+		monomial_index = Dict([0x0001] => 2)
+
+		@test MSOS.evaluate_linear_system_error(model, pop, monomial_index, values) == -2.0e-6
+
+	end
+
+end
+
+@testset "sparsity" begin
+
+		@polyvar x[1:6]
+		f = x[1]*x[2] + x[2]*x[3] + x[3]*x[4] + x[4]*x[5] + x[5]*x[6]
+		g_1 = 1 - x[1]^2 - x[2]^2 
+		g_2 = 1 - x[3]^2 - x[4]^2  
+		g_3 = 1 - x[5]^2 - x[6]^2 
+		pop = MSOS.POP(f, x, g_inequality=g_1, g_equality=[g_2, g_3])
 
 		model = Model()
 		variable_sets = [[1, 2, 3], [3, 4, 5, 6]]
+		relaxation_order = 1
 
 		moment_labels = MSOS.set_moment_matrices!(model, pop, relaxation_order, variable_sets)
 		
@@ -147,12 +192,3 @@ end
 		@test MSOS.assign_constraint_to_set(pop.inequality_constraints[1], variable_sets) == 1
 
 	end
-
-	@testset "nlp" begin
-		
-		model = MSOS.non_linear_model(pop)
-		@test num_constraints(model; count_variable_in_set_constraints=false) == 3
-		
-	end
-
-end

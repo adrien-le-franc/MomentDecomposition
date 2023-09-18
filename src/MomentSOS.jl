@@ -23,6 +23,7 @@ include("models/hierarchies/utils.jl")
 include("models/hierarchies/moment.jl")
 include("models/hierarchies/sos.jl")
 include("models/nlp.jl")
+include("models/certification.jl")
 
 include("sparsity/correlative.jl")
 

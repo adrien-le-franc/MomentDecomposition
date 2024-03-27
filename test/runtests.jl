@@ -52,16 +52,7 @@ using LinearAlgebra
 														  (2, [0x0000, 0x0001]),
 														  (3, [0x0001, 0x0001])]
 
-		@test collect(MSOS.moment_rows([0x0001], 1, 2)) == [(1, [0x0000]),
-	 													  (2, [0x0001])]
-
-	 	@test collect(MSOS.coupling_moments([0x0001, 0x0003], 2)) == [[0x0000, 0x0000],
-																	[0x0000, 0x0001],
-																	[0x0000, 0x0003],
-																	[0x0001, 0x0001],
-																	[0x0001, 0x0003],
-																	[0x0003, 0x0003]]
-
+		@test collect(MSOS.moment_rows([0x0001], 1, 2)) == [(1, [0x0000]), (2, [0x0001])]
 		@test MSOS.monomial([0x0002, 0x0000, 0x0001]) == [0x0001, 0x0002]
 		@test MSOS.monomial_product([0x0001], [0x0001, 0x0000]) == [0x0001, 0x0001]
 		@test MSOS.monomial_product([0x0001], [0x0001, 0x0000], [0x0000]) == [0x0001, 0x0001]

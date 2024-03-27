@@ -66,17 +66,6 @@ function get_solver_values(model::Model, pop::POP)
 
 end
 
-function update!(dict::Dict{Int64, Float64}, index::Int64, coefficient::Float64)
-
-	if index in keys(dict)
-		dict[index] += coefficient
-	else
-		dict[index] = coefficient
-	end
-
-	return nothing
-end
-
 function evaluate_linear_system_error(model::Model, pop::POP, monomial_index::Dict{Vector{UInt16}, Int64},
 	values::Dict{VariableRef, Float64})
 

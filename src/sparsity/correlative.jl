@@ -1,6 +1,9 @@
 # julia 1.6
 #
 # tools for correlative sparsity
+#
+# WARNING : when the relaxation order is 1 the csp graph 
+# can be made even sparser than what build_csp_graph implements currently (to do)
 
 function build_csp_graph(pop::POP)
 

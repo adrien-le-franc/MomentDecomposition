@@ -41,7 +41,7 @@ pop = MSOS.POP(f, x, g_inequality=g_1, g_equality=g_2)
 model = MSOS.sos_relaxation_model(pop, 1)
 ```
 
-Alternatively, we may choose to work with the moment hierarchy
+Alternatively, we may choose to work with the moment relaxation
 
 ```julia
 model = MSOS.moment_relaxation_model(pop, 1)

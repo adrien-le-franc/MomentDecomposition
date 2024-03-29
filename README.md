@@ -58,3 +58,7 @@ optimize!(model)
 
 Further insights on more advanced functionalities are provided in the [examples](https://github.com/adrien-le-franc/MomentSOS.jl/tree/main/examples) folder. In particular, the code used for 
 the paper [Minimal Sparsity for Second-Order Moment-SOSRelaxations of the AC-OPF Problem](https://hal.science/hal-04110742v2/document) is available in the [opf](https://github.com/adrien-le-franc/MomentSOS.jl/tree/main/examples/opf) subfolder.
+
+## Versions
+
+This code was tested under julia v1.6.7 (LTS), JuMP v1.20.0 and DynamicPolynomials v0.5.5

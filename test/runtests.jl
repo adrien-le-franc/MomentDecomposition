@@ -10,29 +10,39 @@ using LinearAlgebra
 @testset "basics" begin
 
 	@testset "polynomials" begin
-		
+
 		@polyvar x[1:3]
-		f = x[1]^4 + x[2]^4 + x[3]^4 + x[1]*x[2]*x[3]
-		
+		f = 2*x[1]^4 + x[2]^4 + x[3]^4 + x[1]*x[2]*x[3]
 		sparse_polynomial = MSOS.SparsePolynomial(f, x)
 
-		@test sparse_polynomial.coefficients == [1., 1., 1., 1.]
-		@test sparse_polynomial.support == [[0x0001, 0x0001, 0x0001, 0x0001], 
-											[0x0002, 0x0002, 0x0002, 0x0002], 
+		@test sparse_polynomial.coefficients == [1., 1., 1., 2.]
+		@test sparse_polynomial.support == [[0x0001, 0x0002, 0x0003], 
 											[0x0003, 0x0003, 0x0003, 0x0003], 
-											[0x0001, 0x0002, 0x0003]]
+											[0x0002, 0x0002, 0x0002, 0x0002], 
+											[0x0001, 0x0001, 0x0001, 0x0001]]
+
 		@test MSOS.degree(sparse_polynomial) == 4
+		@test collect(MSOS.terms(sparse_polynomial)) == [([0x0001, 0x0002, 0x0003], 1.0), 
+														 ([0x0003, 0x0003, 0x0003, 0x0003], 1.0), 
+														 ([0x0002, 0x0002, 0x0002, 0x0002], 1.0), 
+														 ([0x0001, 0x0001, 0x0001, 0x0001], 2.0)]
 
 		pop = MSOS.POP(f, x, g_inequality=[- x[1]^2 - 0.5*x[2]^2, - x[2]^2 - x[3]^2])
 
 		@test pop.n_variables == 3
 		@test pop.objective.support == sparse_polynomial.support
-		@test pop.inequality_constraints[1].coefficients == [-1. ; -0.5]
+		@test pop.inequality_constraints[1].coefficients == [-0.5, -1.]
 		@test pop.equality_constraints == nothing
-		@test collect(MSOS.terms(sparse_polynomial)) == [([0x0001, 0x0001, 0x0001, 0x0001], 1.),
-													   ([0x0002, 0x0002, 0x0002, 0x0002], 1.),
-													   ([0x0003, 0x0003, 0x0003, 0x0003], 1.),
-													   ([0x0001, 0x0002, 0x0003], 1.)]
+		
+		@polyvar x
+		f = x^2 + 2
+		sparse_polynomial = MSOS.SparsePolynomial(f, x)
+		@test sparse_polynomial.coefficients == [2., 1.]
+		@test sparse_polynomial.support == [[], [0x0001, 0x0001]]
+		pop = MSOS.POP(f, x)
+		@test pop.n_variables == 1
+
+
 
 	end
 

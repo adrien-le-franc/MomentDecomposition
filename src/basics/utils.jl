@@ -2,7 +2,7 @@
 #
 # diverse usful functions 
 
-function find_variable_indice(A::Vector{PolyVar{true}}, l::Int64, a::PolyVar{true})
+function find_variable_indice(A::Vector{V}, l::Int64, a::V) where V <: Variable
 	"""
 	find position of a in ordered list A
 	borrowed from the TSSOS package

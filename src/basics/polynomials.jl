@@ -7,7 +7,7 @@ struct SparsePolynomial
 	coefficients::Vector{Float64}
 end
 
-function SparsePolynomial(f::P, variables::Vector{V}) where {P <: Polynomial, V <: PolyVar}
+function SparsePolynomial(f::P, variables::Vector{V}) where {P <: Polynomial, V <: Variable} 
 
 	n = length(variables)
     
@@ -30,6 +30,10 @@ function SparsePolynomial(f::P, variables::Vector{V}) where {P <: Polynomial, V 
 
 end
 
+function SparsePolynomial(f::P, variable::V) where {P <: Polynomial, V <: Variable}
+	return SparsePolynomial(f, [variable])
+end
+
 degree(f::SparsePolynomial) = maximum(length(monomial) for monomial in f.support)
 terms(f::SparsePolynomial) = zip(f.support, f.coefficients)
 
@@ -42,7 +46,7 @@ end
 
 function POP(f::P1, x::Vector{V};
 	g_inequality::Union{Nothing, P2, Vector{P2}}=nothing,
-	g_equality::Union{Nothing, P3, Vector{P3}}=nothing) where {P1 <: Polynomial, V <: PolyVar,
+	g_equality::Union{Nothing, P3, Vector{P3}}=nothing) where {P1 <: Polynomial, V <: Variable,
 		P2 <: Polynomial, P3 <: Polynomial}
 	
 	objective = SparsePolynomial(f, x)
@@ -65,5 +69,14 @@ function POP(f::P1, x::Vector{V};
 	end
 
 	return POP(objective, n_variables, inequality_constraints, equality_constraints)
+
+end
+
+function POP(f::P1, x::V;
+	g_inequality::Union{Nothing, P2, Vector{P2}}=nothing,
+	g_equality::Union{Nothing, P3, Vector{P3}}=nothing) where {P1 <: Polynomial, V <: Variable,
+		P2 <: Polynomial, P3 <: Polynomial}
+
+	return POP(f, [x], g_inequality=g_inequality, g_equality=g_equality)
 
 end

@@ -54,9 +54,49 @@ set_optimizer(model, Clarabel.Optimizer)
 optimize!(model)
 ```
 
+And call any JuMP function
+
+```julia
+display(Dict("primal_status" => primal_status(model), "dual_status" => dual_status(model), "termination_status" => termination_status(model), "bound" => objective_value(model), "solver_time" => solve_time(model)))
+```
+
+Giving for this example
+
+```
+Dict{String, Any} with 5 entries:
+  "solver_time"        => 0.0016535
+  "termination_status" => OPTIMAL
+  "dual_status"        => FEASIBLE_POINT
+  "primal_status"      => FEASIBLE_POINT
+  "bound"              => -1.29904
+```
+
 ## Further examples
 
-Further insights on more advanced functionalities are provided in the [examples](https://github.com/adrien-le-franc/MomentSOS.jl/tree/main/examples) folder. In particular, the code used for 
+This package also implements **sparse relaxations** based on a compatible [correlative sparsity pattern](https://arxiv.org/pdf/2208.11158.pdf) defined by the user. Again, both moment and SOS relaxations are supported
+
+```julia
+sos_model = MSOS.sos_relaxation_model(pop, 1, [[1, 2], [2, 3]])
+moment_model = MSOS.moment_relaxation_model(pop, 1, [[1, 2], [2, 3]])
+```
+
+Moreover, when the POP is scaled to $[0,1]^n$, you may compute **certified lower bounds** on the SOS relaxation based on a roundoff technique
+
+```julia
+model, monomial_index = MSOS.sos_relaxation_model(pop, 1, return_monomials=true)
+set_optimizer(model, Clarabel.Optimizer)
+optimize!(model)
+epsilon = MSOS.compute_error_for_scaled_sos(model, pop, monomial_index)
+bound = objective_value(model)
+certified_bound = bound + epsilon
+```
+Gives
+```
+-1.2990380988109211 # subject to feasibility errors
+-1.2990381042475807 # certified
+```
+
+Further insights on more advanced functionalities are provided in the [examples](https://github.com/adrien-le-franc/MomentSOS.jl/tree/main/examples) folder. In particular, the code used for **AC-OPF** in
 the paper [Minimal Sparsity for Second-Order Moment-SOSRelaxations of the AC-OPF Problem](https://hal.science/hal-04110742v2/document) is available in the [opf](https://github.com/adrien-le-franc/MomentSOS.jl/tree/main/examples/opf) subfolder.
 
 ## Versions
